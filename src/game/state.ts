@@ -20,6 +20,7 @@ export type GameState = {
   battlesWon: number;
   locationsVisited: string[];
   quests: Record<QuestId, number>;
+  claimedQuests: QuestId[];
   lastBlessing: string;
 };
 
@@ -45,6 +46,7 @@ export const defaultState = (): GameState => ({
   battlesWon: 0,
   locationsVisited: ['settlement'],
   quests: { oak: 0, hunter: 0, mill: 0, swamp: 0 },
+  claimedQuests: [],
   lastBlessing: ''
 });
 
@@ -58,6 +60,7 @@ export function loadState(): GameState {
       ...defaultState(),
       ...parsed,
       quests: { ...defaultState().quests, ...(parsed.quests ?? {}) },
+      claimedQuests: Array.isArray(parsed.claimedQuests) ? parsed.claimedQuests : [],
       locationsVisited: Array.isArray(parsed.locationsVisited) ? parsed.locationsVisited : ['settlement']
     };
   } catch {
