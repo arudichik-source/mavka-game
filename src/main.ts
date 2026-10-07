@@ -26,6 +26,32 @@ const RED = 0xc84f45;
 
 let state: GameState = loadState();
 
+const ACHIEVEMENT_NAMES: Record<string, string> = {
+  first_step: 'Перший крок',
+  first_blood: 'Перша перемога',
+  swamp_hunter: 'Мисливиця Боліт',
+  guardian: 'Очищення Пущі',
+  upgrader: 'Майстриня спорядження',
+  chapter_one: 'Берегиня Серця Пущі'
+};
+
+function unlockAchievement(id: string): boolean {
+  if (state.achievements.includes(id)) return false;
+  state.achievements.push(id);
+  saveState(state);
+  return true;
+}
+
+function refreshChapterCompletion(): boolean {
+  const required: QuestId[] = ['oak', 'hunter', 'mill', 'swamp'];
+  const complete = required.every(id => state.claimedQuests.includes(id));
+  const newlyCompleted = complete && !state.chapterComplete;
+  state.chapterComplete = complete;
+  if (newlyCompleted) unlockAchievement('chapter_one');
+  saveState(state);
+  return newlyCompleted;
+}
+
 type ActionButton = {
   box: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
@@ -148,6 +174,11 @@ class TitleScene extends Phaser.Scene {
     button(this, 200, 430, 270, 52, 'Нова гра', () => this.confirmNewGame());
     button(this, 200, 495, 270, 52, 'Про гру', () => this.showAbout());
 
+    const progress = state.chapterComplete
+      ? 'Розділ I завершено • Серце Пущі очищено'
+      : `Рівень ${state.level} • боїв: ${state.battlesWon} • досягнень: ${state.achievements.length}`;
+    uiText(this, 74, 585, progress, 14, state.chapterComplete ? '#9fe2ae' : '#cbbd9c');
+
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready architecture • Android-ready', 13, '#7d9187');
   }
@@ -227,6 +258,12 @@ class RegionScene extends Phaser.Scene {
     this.makeNav();
     this.refreshHud();
     this.cameras.main.fadeIn(250, 0, 0, 0);
+
+    if (!state.seenIntro) {
+      this.time.delayedCall(350, () => this.openIntro());
+    } else if (state.chapterComplete) {
+      this.time.delayedCall(350, () => this.showChapterComplete());
+    }
   }
 
   private refreshHud() {
@@ -257,13 +294,14 @@ class RegionScene extends Phaser.Scene {
 
   private makeNav() {
     const items = [
-      { x: 150, label: 'Карта', action: () => this.closeModal() },
-      { x: 405, label: 'Завдання', action: () => this.openQuests() },
-      { x: 665, label: 'Рюкзак', action: () => this.openInventory() },
-      { x: 930, label: 'Табір', action: () => this.openCamp() }
+      { x: 120, label: 'Карта', action: () => this.closeModal() },
+      { x: 350, label: 'Завдання', action: () => this.openQuests() },
+      { x: 580, label: 'Рюкзак', action: () => this.openInventory() },
+      { x: 810, label: 'Літопис', action: () => this.openChronicle() },
+      { x: 1040, label: 'Табір', action: () => this.openCamp() }
     ];
     items.forEach((item) => {
-      const hit = this.add.rectangle(item.x, 675, 220, 64, 0xf0d18c, 0.001)
+      const hit = this.add.rectangle(item.x, 675, 200, 64, 0xf0d18c, 0.001)
         .setInteractive({ useHandCursor: true }).setDepth(20);
       hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.08));
       hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001));
@@ -304,6 +342,69 @@ class RegionScene extends Phaser.Scene {
   private addModalButton(c: Phaser.GameObjects.Container, x: number, y: number, label: string, fn: () => void, accent = GOLD) {
     const b = button(this, x, y, 220, 48, label, fn, accent);
     c.add([b.box, b.label]);
+  }
+
+  private openIntro() {
+    const c = this.baseModal('Мавка: Легенди Пущі', 'Розділ I • Серце Пущі', 760, 500);
+    const body = uiText(
+      this,
+      W / 2,
+      325,
+      'Темна скверна прокидається у Туманних Болотах. Щоб очистити Серце Пущі, заручися благословенням Старого Дуба, пройди Стежку Мисливця, допоможи Старому Млину та здолай Болотного Хранителя.',
+      17,
+      '#ded3bd',
+      0.5
+    ).setWordWrapWidth(610).setAlign('center').setLineSpacing(7);
+    c.add(body);
+    const start = button(this, W / 2, 455, 260, 50, 'Почати подорож', () => {
+      state.seenIntro = true;
+      visit(state, 'settlement');
+      unlockAchievement('first_step');
+      saveState(state);
+      this.closeModal();
+      this.toast('Розділ I розпочато.');
+    }, 0x68bd83);
+    c.add([start.box, start.label]);
+  }
+
+  private showChapterComplete() {
+    const c = this.baseModal('Серце Пущі врятовано', 'Розділ I завершено', 700, 430);
+    const body = uiText(
+      this,
+      W / 2,
+      340,
+      `Мавка очистила Туманні Болота та відновила зв’язок із духами Пущі.\nРівень: ${state.level} • Перемог: ${state.battlesWon} • Досягнень: ${state.achievements.length}`,
+      17,
+      '#dfe6c4',
+      0.5
+    ).setAlign('center').setLineSpacing(8);
+    c.add(body);
+    const again = button(this, W / 2, 440, 250, 48, 'Продовжити дослідження', () => this.closeModal(), 0x69bd83);
+    c.add([again.box, again.label]);
+  }
+
+  private openChronicle() {
+    const c = this.baseModal('Літопис Пущі', 'Досягнення, бестіарій і прогрес розділу', 780, 540);
+    const encounterLines = [
+      `Болотне Потерча: ${state.encounterWins.potershata ?? 0}`,
+      `Туманний Звір: ${state.encounterWins.mirebeast ?? 0}`,
+      `Болотний Хранитель: ${state.encounterWins.guardian ?? 0}`
+    ];
+    const achievementLines = Object.entries(ACHIEVEMENT_NAMES)
+      .map(([id, name]) => `${state.achievements.includes(id) ? '✓' : '○'} ${name}`)
+      .join('\n');
+    const left = uiText(this, 365, 330, 'Бестіарій\n\n' + encounterLines.join('\n'), 16, '#ddd3bb').setLineSpacing(8);
+    const right = uiText(this, 700, 350, 'Досягнення\n\n' + achievementLines, 15, '#ddd3bb').setLineSpacing(7);
+    const chapter = uiText(
+      this,
+      W / 2,
+      545,
+      state.chapterComplete ? 'Розділ I: ЗАВЕРШЕНО' : `Розділ I: ${state.claimedQuests.length}/4 сюжетні нагороди`,
+      17,
+      state.chapterComplete ? '#91e3a7' : '#e2c77c',
+      0.5
+    );
+    c.add([left, right, chapter]);
   }
 
   private openSettlement() {
@@ -525,8 +626,14 @@ class RegionScene extends Phaser.Scene {
     state.coins += coins;
     state.crystals += crystals;
     const levels = gainXp(state, xp);
+    const chapterJustCompleted = refreshChapterCompletion();
     saveState(state);
     this.refreshHud();
+    if (chapterJustCompleted) {
+      this.closeModal();
+      this.showChapterComplete();
+      return;
+    }
     this.toast(levels ? 'Нагороду отримано • новий рівень!' : 'Нагороду за завдання отримано.');
   }
 
@@ -551,6 +658,7 @@ class RegionScene extends Phaser.Scene {
       if (state.coins < cost) return this.toast('Недостатньо монет.');
       state.coins -= cost;
       state.weaponLevel += 1;
+      if (state.weaponLevel >= 3 || state.armorLevel >= 3 || state.wolfLevel >= 3) unlockAchievement('upgrader');
       saveState(state);
       this.refreshHud();
       this.closeModal();
@@ -562,6 +670,7 @@ class RegionScene extends Phaser.Scene {
       if (state.coins < cost) return this.toast('Недостатньо монет.');
       state.coins -= cost;
       state.armorLevel += 1;
+      if (state.weaponLevel >= 3 || state.armorLevel >= 3 || state.wolfLevel >= 3) unlockAchievement('upgrader');
       saveState(state);
       this.refreshHud();
       this.closeModal();
@@ -573,6 +682,7 @@ class RegionScene extends Phaser.Scene {
       if (state.crystals < cost) return this.toast('Недостатньо кристалів.');
       state.crystals -= cost;
       state.wolfLevel += 1;
+      if (state.weaponLevel >= 3 || state.armorLevel >= 3 || state.wolfLevel >= 3) unlockAchievement('upgrader');
       saveState(state);
       this.refreshHud();
       this.closeModal();
@@ -1018,9 +1128,13 @@ class BattleScene extends Phaser.Scene {
     state.herbs += herbs;
     state.crystals += crystals;
     state.battlesWon += 1;
+    state.encounterWins[this.encounter.id] = (state.encounterWins[this.encounter.id] ?? 0) + 1;
+    if (state.battlesWon === 1) unlockAchievement('first_blood');
+    if ((state.encounterWins.potershata ?? 0) + (state.encounterWins.mirebeast ?? 0) >= 6) unlockAchievement('swamp_hunter');
     if (this.encounter.boss) {
       state.bossWins += 1;
       state.quests.swamp = 1;
+      unlockAchievement('guardian');
     }
     state.hp = Math.max(1, this.heroHp);
     state.mana = this.heroMana;
