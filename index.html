@@ -4,15 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#081812" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./mavka-icon.svg" type="image/svg+xml" />
     <meta
       name="description"
-      content="Mavka Game — playable browser RPG prototype"
+      content="Мавка: Легенди Пущі — браузерна 2D RPG з тактичними боями та збереженням прогресу."
     />
-    <title>Mavka Game — Серце Пущі</title>
+    <title>Мавка: Легенди Пущі</title>
   </head>
   <body>
-    <main id="app-shell" aria-label="Mavka Game">
-      <div id="game"></div>
+    <main id="app-shell" aria-label="Мавка: Легенди Пущі">
+      <div id="game" aria-label="Ігрове поле"></div>
       <div id="rotate-hint">Для найкращого вигляду поверни телефон горизонтально.</div>
     </main>
     <script type="module" src="/src/main.ts"></script>
