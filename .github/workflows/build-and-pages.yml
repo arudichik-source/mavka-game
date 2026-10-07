@@ -37,6 +37,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Runtime browser smoke test
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/mavka-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          npm run test:runtime
+
       - name: Upload build artifact
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3

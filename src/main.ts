@@ -893,4 +893,6 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, TitleScene, RegionScene, BattleScene]
 };
 
-new Phaser.Game(config);
+const mavkaGame = new Phaser.Game(config);
+
+(window as Window & { __MAVKA_GAME__?: Phaser.Game }).__MAVKA_GAME__ = mavkaGame;
