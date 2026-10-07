@@ -1,34 +1,40 @@
 # mavka-game
 
-2D browser RPG for Web, Telegram Mini App and Android.
+**Mavka: Legends of the Forest** is a browser-first 2D RPG built for Web, future Telegram Mini App packaging, and future Android packaging.
 
-## First playable prototype
+## Current release: v0.5.0
 
-The current prototype is built around the selected **Variant 2: a large living region screen** instead of a generic node map.
+This branch contains a complete playable **Chapter I vertical slice**:
 
-### Implemented
-
-- `Серце Пущі` as one explorable region screen;
-- seven interactive landmarks;
-- Mavka-themed HUD, quests, resources and navigation;
-- animated ambient world elements;
-- `Туманні Болота` opens a playable 2D boss battle;
-- five active skills with mana costs, cooldowns and effects;
-- wolf companion attack;
-- boss counter-attacks;
-- HP / mana / boss HP;
-- auto-battle toggle;
-- victory / defeat flow;
-- responsive 16:9 browser layout;
-- GitHub Actions build and GitHub Pages deployment workflow.
-
-The first prototype deliberately uses procedural graphics and UI shapes rather than final art assets. This keeps the code immediately runnable while the visual identity, characters and locations are still being designed.
+- title screen and auto-save;
+- illustrated **Heart of the Forest** region;
+- seven interactive locations;
+- quests with claimable rewards;
+- Old Oak blessing;
+- Hunter expedition;
+- Old Mill supplies;
+- inventory / equipment upgrades;
+- health potions and mana Ether;
+- three swamp encounters;
+- full boss fight against the Swamp Guardian;
+- five combat skills with cooldowns;
+- wolf companion scaling;
+- armor damage reduction;
+- auto-battle;
+- XP and level progression;
+- achievements and bestiary statistics;
+- persistent local progression;
+- Chapter I completion state;
+- responsive 16:9 desktop/mobile presentation;
+- browser runtime smoke test in CI;
+- automatic GitHub Pages deployment from `main`.
 
 ## Stack
 
 - Phaser 4.2.1
 - TypeScript 5.9
 - Vite 8
+- Playwright Core runtime smoke test
 
 ## Run locally
 
@@ -37,21 +43,14 @@ npm install
 npm run dev
 ```
 
-Production build:
+Production verification:
 
 ```bash
 npm run build
+npm run preview -- --host 127.0.0.1
+npm run test:runtime
 ```
 
-## Prototype flow
+## Play loop
 
-1. Open `Серце Пущі`.
-2. Select any landmark to inspect it.
-3. Select **Туманні Болота**.
-4. Press **Увійти в бій**.
-5. Use the five skills or enable **Автобій**.
-6. Win or return to the region.
-
-## Direction
-
-The target is a character-driven 2D RPG inspired by the interaction loop of classic browser/mobile RPGs, while using an original Mavka universe, its characters and locations. Final combat will use authored 2D animation assets; the current vector actors are placeholders for gameplay validation.
+Explore **Heart of the Forest** → complete the Oak, Hunter and Mill objectives → improve Mavka, armor, staff and wolf → fight through the Misty Swamps → defeat the Swamp Guardian → claim the story rewards → complete Chapter I.
