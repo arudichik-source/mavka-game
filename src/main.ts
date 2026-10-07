@@ -1190,3 +1190,11 @@ const config: Phaser.Types.Core.GameConfig = {
 const mavkaGame = new Phaser.Game(config);
 
 (window as Window & { __MAVKA_GAME__?: Phaser.Game }).__MAVKA_GAME__ = mavkaGame;
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // The game remains fully playable if service-worker registration is unavailable.
+    });
+  }, { once: true });
+}
