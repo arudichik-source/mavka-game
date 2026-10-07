@@ -433,21 +433,41 @@ class RegionScene extends Phaser.Scene {
   }
 
   private openSwamp() {
-    const c = this.baseModal('Туманні Болота', 'Небезпечна бойова зона • рекомендований рівень 5+', 680, 470);
-    const lines = [
-      'Болотний Хранитель',
-      `Перемог над Хранителем: ${state.bossWins}`,
-      'Нагорода: монети • досвід • трави • шанс кристала',
-      'Навички: Іскра • Коріння • Вовк • Вітер • Серце Пущі'
-    ];
-    const info = uiText(this, W / 2, 340, lines.join('\n'), 17, '#d9d1ba', 0.5)
-      .setWordWrapWidth(540).setAlign('center').setLineSpacing(8);
+    const c = this.baseModal('Туманні Болота', 'Обери сутичку • складніші вороги дають кращу здобич', 720, 520);
+    const info = uiText(
+      this,
+      W / 2,
+      270,
+      `Перемог у боях: ${state.battlesWon}   •   Хранителя переможено: ${state.bossWins} разів\nБроня: рівень ${state.armorLevel}   •   Посох: рівень ${state.weaponLevel}   •   Вовк: рівень ${state.wolfLevel}`,
+      15,
+      '#d9d1ba',
+      0.5
+    ).setAlign('center').setLineSpacing(7);
     c.add(info);
-    this.addModalButton(c, W / 2, 485, 'Увійти в бій', () => {
-      this.closeModal();
-      this.cameras.main.fadeOut(240, 0, 0, 0);
-      this.time.delayedCall(250, () => this.scene.start('battle'));
-    }, 0x61c690);
+
+    const choices: Array<{ encounter: Encounter; y: number; accent: number; hint: string }> = [
+      { encounter: ENCOUNTERS.potershata, y: 350, accent: 0x64b887, hint: 'Легка сутичка' },
+      { encounter: ENCOUNTERS.mirebeast, y: 415, accent: 0x6aa8bd, hint: 'Середня сутичка' },
+      { encounter: ENCOUNTERS.guardian, y: 485, accent: 0xc89b4e, hint: 'БОС • сюжетна ціль' }
+    ];
+
+    choices.forEach(({ encounter, y, accent, hint }) => {
+      const b = button(
+        this,
+        W / 2,
+        y,
+        430,
+        50,
+        `${encounter.name}  •  ${hint}`,
+        () => {
+          this.closeModal();
+          this.cameras.main.fadeOut(220, 0, 0, 0);
+          this.time.delayedCall(230, () => this.scene.start('battle', { encounterId: encounter.id }));
+        },
+        accent
+      );
+      c.add([b.box, b.label]);
+    });
   }
 
   private openQuests() {
@@ -592,6 +612,72 @@ class RegionScene extends Phaser.Scene {
   }
 }
 
+type EncounterId = 'potershata' | 'mirebeast' | 'guardian';
+
+type Encounter = {
+  id: EncounterId;
+  name: string;
+  subtitle: string;
+  hpBase: number;
+  damageMin: number;
+  damageMax: number;
+  coinMin: number;
+  coinMax: number;
+  herbMin: number;
+  herbMax: number;
+  xp: number;
+  crystalChance: number;
+  boss: boolean;
+};
+
+const ENCOUNTERS: Record<EncounterId, Encounter> = {
+  potershata: {
+    id: 'potershata',
+    name: 'Болотне Потерча',
+    subtitle: 'Хитрий дух туману',
+    hpBase: 620,
+    damageMin: 30,
+    damageMax: 48,
+    coinMin: 180,
+    coinMax: 270,
+    herbMin: 6,
+    herbMax: 11,
+    xp: 130,
+    crystalChance: 12,
+    boss: false
+  },
+  mirebeast: {
+    id: 'mirebeast',
+    name: 'Туманний Звір',
+    subtitle: 'Дикий хижак скверни',
+    hpBase: 780,
+    damageMin: 38,
+    damageMax: 58,
+    coinMin: 250,
+    coinMax: 360,
+    herbMin: 8,
+    herbMax: 14,
+    xp: 190,
+    crystalChance: 20,
+    boss: false
+  },
+  guardian: {
+    id: 'guardian',
+    name: 'Болотний Хранитель',
+    subtitle: 'Стародавній носій скверни',
+    hpBase: 980,
+    damageMin: 46,
+    damageMax: 72,
+    coinMin: 420,
+    coinMax: 620,
+    herbMin: 10,
+    herbMax: 18,
+    xp: 280,
+    crystalChance: 35,
+    boss: true
+  }
+};
+
 type Skill = {
   name: string;
   cost: number;
@@ -608,6 +694,7 @@ const SKILLS: Skill[] = [
 ];
 
 class BattleScene extends Phaser.Scene {
+  private encounter: Encounter = ENCOUNTERS.guardian;
   private heroHp = 0;
   private heroMana = 0;
   private enemyMax = 0;
@@ -634,11 +721,18 @@ class BattleScene extends Phaser.Scene {
     super('battle');
   }
 
+  init(data: { encounterId?: EncounterId }) {
+    this.encounter = ENCOUNTERS[data?.encounterId ?? 'guardian'] ?? ENCOUNTERS.guardian;
+  }
+
   create() {
     background(this, 'battle-bg');
     this.heroHp = Math.max(1, state.hp);
     this.heroMana = Math.max(0, state.mana);
-    this.enemyMax = 980 + state.bossWins * 120;
+    const scaling = this.encounter.boss
+      ? state.bossWins * 120
+      : Math.floor(state.battlesWon / 4) * 45;
+    this.enemyMax = this.encounter.hpBase + scaling;
     this.enemyHp = this.enemyMax;
     this.busy = false;
     this.rooted = false;
@@ -815,7 +909,8 @@ class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: warning, scale: 2.2, alpha: 0, duration: 420, onComplete: () => warning.destroy() });
 
     this.time.delayedCall(280, () => {
-      let damage = Phaser.Math.Between(46, 72) + state.bossWins * 3;
+      const progressionDamage = this.encounter.boss ? state.bossWins * 3 : Math.floor(state.battlesWon / 5) * 2;
+      let damage = Phaser.Math.Between(this.encounter.damageMin, this.encounter.damageMax) + progressionDamage;
       damage = Math.max(8, damage - Math.max(0, state.armorLevel - 1) * 6);
       if (this.guarded) {
         damage = Math.floor(damage * 0.35);
@@ -895,7 +990,7 @@ class BattleScene extends Phaser.Scene {
     this.enemyFill.displayWidth = 430 * enemyRatio;
     this.hpText.setText(`Мавка  ${this.heroHp}/${state.maxHp}`);
     this.manaText.setText(`Мана ${this.heroMana}/${state.maxMana}`);
-    this.enemyText.setText(`Болотний Хранитель  ${this.enemyHp}/${this.enemyMax}`);
+    this.enemyText.setText(`${this.encounter.name}  ${this.enemyHp}/${this.enemyMax}`);
   }
 
   private log(message: string) {
@@ -914,17 +1009,19 @@ class BattleScene extends Phaser.Scene {
 
   private victory() {
     this.busy = true;
-    const coins = Phaser.Math.Between(420, 620);
-    const herbs = Phaser.Math.Between(10, 18);
-    const crystals = Phaser.Math.Between(0, 100) < 35 ? 1 : 0;
-    const xp = 280 + state.bossWins * 25;
+    const coins = Phaser.Math.Between(this.encounter.coinMin, this.encounter.coinMax);
+    const herbs = Phaser.Math.Between(this.encounter.herbMin, this.encounter.herbMax);
+    const crystals = Phaser.Math.Between(0, 99) < this.encounter.crystalChance ? 1 : 0;
+    const xp = this.encounter.xp + (this.encounter.boss ? state.bossWins * 25 : 0);
 
     state.coins += coins;
     state.herbs += herbs;
     state.crystals += crystals;
-    state.bossWins += 1;
     state.battlesWon += 1;
-    state.quests.swamp = 1;
+    if (this.encounter.boss) {
+      state.bossWins += 1;
+      state.quests.swamp = 1;
+    }
     state.hp = Math.max(1, this.heroHp);
     state.mana = this.heroMana;
     const levels = gainXp(state, xp);
@@ -932,7 +1029,7 @@ class BattleScene extends Phaser.Scene {
 
     this.showEndModal(
       'ПЕРЕМОГА',
-      `+${coins} монет   +${herbs} трав   +${xp} XP${crystals ? '   +1 кристал' : ''}${levels ? '   • НОВИЙ РІВЕНЬ' : ''}`,
+      `${this.encounter.name} переможений.\n+${coins} монет   +${herbs} трав   +${xp} XP${crystals ? '   +1 кристал' : ''}${levels ? '   • НОВИЙ РІВЕНЬ' : ''}`,
       true
     );
   }
