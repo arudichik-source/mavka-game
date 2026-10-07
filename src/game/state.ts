@@ -22,6 +22,10 @@ export type GameState = {
   quests: Record<QuestId, number>;
   claimedQuests: QuestId[];
   lastBlessing: string;
+  achievements: string[];
+  encounterWins: Record<string, number>;
+  chapterComplete: boolean;
+  seenIntro: boolean;
 };
 
 const STORAGE_KEY = 'mavka-game-save-v2';
@@ -47,7 +51,11 @@ export const defaultState = (): GameState => ({
   locationsVisited: ['settlement'],
   quests: { oak: 0, hunter: 0, mill: 0, swamp: 0 },
   claimedQuests: [],
-  lastBlessing: ''
+  lastBlessing: '',
+  achievements: [],
+  encounterWins: {},
+  chapterComplete: false,
+  seenIntro: false
 });
 
 export function loadState(): GameState {
@@ -61,7 +69,11 @@ export function loadState(): GameState {
       ...parsed,
       quests: { ...defaultState().quests, ...(parsed.quests ?? {}) },
       claimedQuests: Array.isArray(parsed.claimedQuests) ? parsed.claimedQuests : [],
-      locationsVisited: Array.isArray(parsed.locationsVisited) ? parsed.locationsVisited : ['settlement']
+      locationsVisited: Array.isArray(parsed.locationsVisited) ? parsed.locationsVisited : ['settlement'],
+      achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
+      encounterWins: parsed.encounterWins && typeof parsed.encounterWins === 'object' ? parsed.encounterWins : {},
+      chapterComplete: Boolean(parsed.chapterComplete),
+      seenIntro: Boolean(parsed.seenIntro)
     };
   } catch {
     return defaultState();
