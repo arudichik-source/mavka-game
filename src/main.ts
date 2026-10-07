@@ -1,81 +1,79 @@
 import * as Phaser from 'phaser';
 import './styles.css';
+import { ATLAS_DATA_URI, FRAME_HEIGHT, FRAME_WIDTH } from './art/atlas';
+import {
+  GameState,
+  gainXp,
+  loadState,
+  resetState,
+  saveState,
+  todayKey,
+  visit,
+  xpNeeded
+} from './game/state';
 
 const W = 1280;
 const H = 720;
+const GOLD = 0xd8ad55;
+const GOLD_LIGHT = '#f4dda1';
+const CREAM = '#f7edd2';
+const MUTED = '#c7b99a';
+const PANEL = 0x08110f;
+const GREEN = 0x62c98a;
+const CYAN = 0x61d1dc;
+const RED = 0xc84f45;
 
-const C = {
-  ink: 0x07110d,
-  panel: 0x0c1713,
-  panel2: 0x13231b,
-  gold: 0xd7aa4b,
-  gold2: 0xf0d58a,
-  cream: '#f7edcf',
-  muted: '#c8b98e',
-  green: 0x4f9a68,
-  greenBright: 0x8bd18c,
-  cyan: 0x5fd7c4,
-  red: 0xb74335,
-  redBright: 0xef6f55,
-  blue: 0x3d7fd6,
-  swamp: 0x16494b,
-  black: 0x050a08
+let state: GameState = loadState();
+
+type ActionButton = {
+  box: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
 };
 
-type LandmarkData = {
-  key: string;
-  name: string;
-  subtitle: string;
-  x: number;
-  y: number;
-  color: number;
-  icon: string;
-  battle?: boolean;
-};
-
-const LANDMARKS: LandmarkData[] = [
-  { key: 'settlement', name: 'Поселення Мавки', subtitle: 'Люди • ремесла • союзники', x: 258, y: 320, color: 0x4e9e61, icon: '⌂' },
-  { key: 'oak', name: 'Старий Дуб', subtitle: 'Духи • знання • благословення', x: 505, y: 190, color: 0xc39a42, icon: '♧' },
-  { key: 'shrine', name: 'Святилище', subtitle: 'Очищення • сила природи', x: 765, y: 190, color: 0x4d9f79, icon: '✦' },
-  { key: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання • рідкісні знахідки', x: 260, y: 526, color: 0xb08b4b, icon: '◇' },
-  { key: 'yarin', name: 'Ярин Дол', subtitle: 'Поля • трави • історії', x: 585, y: 490, color: 0xc69f55, icon: '⌂' },
-  { key: 'mill', name: 'Старий Млин', subtitle: 'Торгівля • ресурси', x: 842, y: 352, color: 0xd0a14f, icon: '✣' },
-  { key: 'swamp', name: 'Туманні Болота', subtitle: 'Небезпека • нові таємниці', x: 965, y: 540, color: 0x4db59b, icon: '≈', battle: true }
-];
-
-function panel(scene: Phaser.Scene, x: number, y: number, w: number, h: number, alpha = 0.93) {
-  const bg = scene.add.rectangle(x, y, w, h, C.panel, alpha)
-    .setStrokeStyle(2, C.gold, 0.72);
-  scene.add.rectangle(x, y, w - 10, h - 10, 0x000000, 0)
-    .setStrokeStyle(1, C.gold2, 0.18);
-  return bg;
-}
-
-function text(
+function gameText(
   scene: Phaser.Scene,
   x: number,
   y: number,
   value: string,
   size = 20,
-  color = C.cream,
-  align: 'left' | 'center' | 'right' = 'left'
+  color = CREAM,
+  originX = 0
 ) {
-  const originX = align === 'left' ? 0 : align === 'center' ? 0.5 : 1;
   return scene.add.text(x, y, value, {
     fontFamily: 'Georgia, "Times New Roman", serif',
     fontSize: `${size}px`,
     color,
-    stroke: '#000000',
-    strokeThickness: size >= 24 ? 3 : 2,
-    align
+    stroke: '#030806',
+    strokeThickness: size >= 24 ? 4 : 2
   }).setOrigin(originX, 0.5);
 }
 
-function small(scene: Phaser.Scene, x: number, y: number, value: string, color = C.muted, align: 'left' | 'center' | 'right' = 'left') {
-  return text(scene, x, y, value, 14, color, align);
+function uiText(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  value: string,
+  size = 16,
+  color = CREAM,
+  originX = 0
+) {
+  return scene.add.text(x, y, value, {
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    fontSize: `${size}px`,
+    fontStyle: size >= 20 ? '600' : '500',
+    color,
+    wordWrap: { width: 520 }
+  }).setOrigin(originX, 0.5);
 }
 
-function makeButton(
+function ornatePanel(scene: Phaser.Scene, x: number, y: number, w: number, h: number, alpha = 0.96) {
+  const shadow = scene.add.rectangle(x + 6, y + 8, w, h, 0x000000, 0.48);
+  const outer = scene.add.rectangle(x, y, w, h, PANEL, alpha).setStrokeStyle(2, GOLD, 0.92);
+  const inner = scene.add.rectangle(x, y, w - 12, h - 12, 0x101c17, 0.25).setStrokeStyle(1, 0xf0d28a, 0.24);
+  return [shadow, outer, inner];
+}
+
+function button(
   scene: Phaser.Scene,
   x: number,
   y: number,
@@ -83,584 +81,656 @@ function makeButton(
   h: number,
   label: string,
   onClick: () => void,
-  accent = C.gold
-) {
-  const box = scene.add.rectangle(x, y, w, h, C.panel2, 0.98)
+  accent = GOLD
+): ActionButton {
+  const box = scene.add.rectangle(x, y, w, h, 0x10231b, 0.96)
     .setStrokeStyle(2, accent, 0.92)
     .setInteractive({ useHandCursor: true });
-  const labelText = text(scene, x, y, label, 18, C.cream, 'center');
+  const t = uiText(scene, x, y, label, 18, '#f6ecd2', 0.5);
   box.on('pointerover', () => {
-    box.setFillStyle(accent, 0.2);
-    labelText.setColor('#fff5d8');
+    box.setFillStyle(accent, 0.24);
+    box.setScale(1.02);
   });
   box.on('pointerout', () => {
-    box.setFillStyle(C.panel2, 0.98);
-    labelText.setColor(C.cream);
+    box.setFillStyle(0x10231b, 0.96);
+    box.setScale(1);
   });
   box.on('pointerdown', onClick);
-  return { box, labelText };
+  return { box, label: t };
 }
 
+function background(scene: Phaser.Scene, key: 'region-bg' | 'battle-bg') {
+  return scene.add.image(W / 2, H / 2, key).setDisplaySize(W, H).setDepth(-20);
+}
+
+class BootScene extends Phaser.Scene {
+  constructor() {
+    super('boot');
+  }
+
+  preload() {
+    this.load.image('visual-atlas', ATLAS_DATA_URI);
+  }
+
+  create() {
+    const source = this.textures.get('visual-atlas').getSourceImage() as HTMLImageElement;
+    const makeFrame = (key: string, sy: number) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = FRAME_WIDTH;
+      canvas.height = FRAME_HEIGHT;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D unavailable');
+      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+      this.textures.addCanvas(key, canvas);
+    };
+    makeFrame('region-bg', 0);
+    makeFrame('battle-bg', FRAME_HEIGHT);
+    this.scene.start('title');
+  }
+}
+
+class TitleScene extends Phaser.Scene {
+  constructor() {
+    super('title');
+  }
+
+  create() {
+    background(this, 'region-bg');
+    this.add.rectangle(W / 2, H / 2, W, H, 0x020806, 0.48);
+    this.add.rectangle(250, H / 2, 500, H, 0x020806, 0.7);
+
+    gameText(this, 70, 150, 'МАВКА', 72, '#f0d28d');
+    gameText(this, 74, 210, 'ЛЕГЕНДИ ПУЩІ', 25, '#d8c6a0');
+    uiText(this, 75, 260, '2D RPG • жива Пуща • тактичні бої', 16, '#c8d8cd');
+
+    button(this, 200, 360, 270, 56, 'Продовжити', () => this.scene.start('region'), 0x73c992);
+    button(this, 200, 430, 270, 52, 'Нова гра', () => this.confirmNewGame());
+    button(this, 200, 495, 270, 52, 'Про гру', () => this.showAbout());
+
+    uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
+    uiText(this, 74, 670, 'Web • Telegram-ready architecture • Android-ready', 13, '#7d9187');
+  }
+
+  private confirmNewGame() {
+    const modal = this.add.container(0, 0).setDepth(100);
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setInteractive();
+    const parts = ornatePanel(this, W / 2, H / 2, 520, 280);
+    const title = gameText(this, W / 2, 285, 'Почати нову подорож?', 28, GOLD_LIGHT, 0.5);
+    const body = uiText(this, W / 2, 345, 'Поточний локальний прогрес буде замінено.', 16, '#d5cbb5', 0.5);
+    const yes = button(this, 555, 420, 190, 48, 'Нова гра', () => {
+      state = resetState();
+      this.scene.start('region');
+    }, 0x68b684);
+    const no = button(this, 760, 420, 190, 48, 'Скасувати', () => modal.destroy(true), 0xa17d4b);
+    modal.add([shade, ...parts, title, body, yes.box, yes.label, no.box, no.label]);
+  }
+
+  private showAbout() {
+    const modal = this.add.container(0, 0).setDepth(100);
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setInteractive();
+    const parts = ornatePanel(this, W / 2, H / 2, 650, 360);
+    const title = gameText(this, W / 2, 250, 'Мавка: Легенди Пущі', 30, GOLD_LIGHT, 0.5);
+    const body = uiText(
+      this,
+      W / 2,
+      355,
+      'Пригодницька 2D RPG про Берегиню Пущі. Досліджуй живі регіони, виконуй завдання, збирай спорядження та очищуй землі від скверни. Прогрес зберігається у браузері.',
+      17,
+      '#d9d2c2',
+      0.5
+    ).setWordWrapWidth(540).setAlign('center');
+    const close = button(this, W / 2, 475, 210, 48, 'Закрити', () => modal.destroy(true));
+    modal.add([shade, ...parts, title, body, close.box, close.label]);
+  }
+}
+
+type Landmark = {
+  id: string;
+  name: string;
+  subtitle: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+const LANDMARKS: Landmark[] = [
+  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', x: 330, y: 302, w: 250, h: 120 },
+  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', x: 610, y: 205, w: 170, h: 100 },
+  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', x: 885, y: 190, w: 185, h: 100 },
+  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', x: 820, y: 320, w: 240, h: 110 },
+  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', x: 300, y: 505, w: 180, h: 90 },
+  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', x: 670, y: 445, w: 235, h: 120 },
+  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', x: 1010, y: 505, w: 300, h: 125 }
+];
+
 class RegionScene extends Phaser.Scene {
-  private selected = LANDMARKS[0];
-  private titleText!: Phaser.GameObjects.Text;
-  private subtitleText!: Phaser.GameObjects.Text;
-  private actionText!: Phaser.GameObjects.Text;
-  private actionButton!: Phaser.GameObjects.Rectangle;
-  private statusText!: Phaser.GameObjects.Text;
-  private selectionGlow!: Phaser.GameObjects.Arc;
+  private modal?: Phaser.GameObjects.Container;
+  private resourceText!: Phaser.GameObjects.Text;
+  private profileText!: Phaser.GameObjects.Text;
+  private toastText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('region');
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#07110d');
-    this.drawLivingRegion();
-    this.drawTopBar();
-    this.drawLandmarks();
-    this.drawQuestPanel();
-    this.drawBottomBar();
-    this.drawSelectionPanel();
-    this.selectLandmark(this.selected);
+    background(this, 'region-bg');
+    this.add.rectangle(W / 2, 29, W, 58, 0x04100c, 0.62).setDepth(10);
 
-    for (let i = 0; i < 18; i++) {
-      const mote = this.add.circle(
-        Phaser.Math.Between(70, 1030),
-        Phaser.Math.Between(100, 620),
-        Phaser.Math.Between(1, 3),
-        i % 3 === 0 ? 0xffd875 : 0x8df0ad,
-        Phaser.Math.FloatBetween(0.18, 0.5)
-      ).setDepth(3);
-      this.tweens.add({
-        targets: mote,
-        y: mote.y - Phaser.Math.Between(14, 38),
-        x: mote.x + Phaser.Math.Between(-12, 12),
-        alpha: Phaser.Math.FloatBetween(0.1, 0.7),
-        duration: Phaser.Math.Between(1800, 4200),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.inOut'
-      });
-    }
+    this.profileText = uiText(this, 24, 28, '', 16, '#f5e8c5').setDepth(11);
+    this.resourceText = uiText(this, W - 24, 28, '', 16, '#f4dda1', 1).setDepth(11);
+    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(30).setAlpha(0);
+
+    this.makeLandmarks();
+    this.makeNav();
+    this.refreshHud();
+    this.cameras.main.fadeIn(250, 0, 0, 0);
   }
 
-  private drawLivingRegion() {
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0a2118);
-
-    // distant sky and cliffs
-    this.add.rectangle(640, 120, 1280, 240, 0x284d49, 0.56);
-    const mountains = this.add.graphics();
-    mountains.fillStyle(0x263f3a, 1);
-    mountains.fillTriangle(0, 260, 180, 72, 330, 260);
-    mountains.fillTriangle(180, 260, 390, 98, 560, 260);
-    mountains.fillTriangle(430, 260, 660, 55, 840, 260);
-    mountains.fillTriangle(680, 260, 920, 92, 1120, 260);
-    mountains.fillTriangle(900, 260, 1160, 52, 1280, 260);
-
-    // forest masses
-    for (let i = 0; i < 54; i++) {
-      const x = Phaser.Math.Between(0, 1060);
-      const y = Phaser.Math.Between(160, 630);
-      const r = Phaser.Math.Between(24, 64);
-      const color = i % 4 === 0 ? 0x1b4a2c : i % 4 === 1 ? 0x255a34 : i % 4 === 2 ? 0x143824 : 0x2d6337;
-      this.add.circle(x, y, r, color, Phaser.Math.FloatBetween(0.55, 0.9)).setDepth(1);
-    }
-
-    // main ancient tree
-    const trunk = this.add.rectangle(535, 236, 84, 250, 0x5a3c22).setDepth(2);
-    trunk.setStrokeStyle(5, 0x8b6b36, 0.8);
-    for (const [dx, dy, rr] of [[-105,-90,105],[0,-118,132],[110,-88,110],[-140,-10,85],[145,0,85]] as const) {
-      this.add.circle(535 + dx, 170 + dy, rr, 0x295f35, 0.96).setDepth(2);
-    }
-    const rune = this.add.circle(535, 170, 40, 0xf2c75d, 0.18).setStrokeStyle(4, 0xffdf84, 0.9).setDepth(3);
-    text(this, 535, 170, 'ᛉ', 54, '#ffe8a5', 'center').setDepth(4);
-    this.tweens.add({ targets: rune, alpha: { from: 0.14, to: 0.34 }, scale: { from: 0.96, to: 1.06 }, duration: 1800, yoyo: true, repeat: -1 });
-
-    // waterfalls
-    for (const x of [440, 610, 690, 805]) {
-      const fall = this.add.rectangle(x, Phaser.Math.Between(305, 390), Phaser.Math.Between(12, 24), Phaser.Math.Between(70, 135), 0xaee8e6, 0.44).setDepth(2);
-      this.tweens.add({ targets: fall, alpha: { from: 0.26, to: 0.58 }, duration: Phaser.Math.Between(900, 1800), yoyo: true, repeat: -1 });
-    }
-
-    // river
-    const river = this.add.graphics().setDepth(2);
-    river.lineStyle(46, 0x54b9b8, 0.5);
-    river.beginPath();
-    river.moveTo(410, 376);
-    river.lineTo(520, 424);
-    river.lineTo(650, 430);
-    river.lineTo(725, 500);
-    river.lineTo(870, 575);
-    river.strokePath();
-    river.lineStyle(16, 0xb7f0e6, 0.25);
-    river.beginPath();
-    river.moveTo(410, 372);
-    river.lineTo(520, 418);
-    river.lineTo(650, 425);
-    river.lineTo(725, 495);
-    river.lineTo(870, 570);
-    river.strokePath();
-
-    // paths and bridges
-    const paths = this.add.graphics().setDepth(2);
-    paths.lineStyle(14, 0xa47b43, 0.9);
-    paths.beginPath();
-    paths.moveTo(170, 500);
-    paths.lineTo(305, 455);
-    paths.lineTo(430, 435);
-    paths.lineTo(560, 470);
-    paths.lineTo(705, 430);
-    paths.lineTo(860, 350);
-    paths.strokePath();
-    paths.beginPath();
-    paths.moveTo(600, 315);
-    paths.lineTo(745, 260);
-    paths.lineTo(870, 310);
-    paths.strokePath();
-    paths.lineStyle(3, 0xe2c374, 0.35);
-    paths.strokePath();
-
-    // village glow
-    for (let i = 0; i < 13; i++) {
-      const x = Phaser.Math.Between(145, 370);
-      const y = Phaser.Math.Between(265, 430);
-      const house = this.add.rectangle(x, y, Phaser.Math.Between(26, 44), Phaser.Math.Between(20, 34), 0x6a4226, 0.98).setDepth(3);
-      house.setStrokeStyle(1, 0xd4a34a, 0.35);
-      this.add.triangle(x, y - 20, -24, 16, 0, -10, 24, 16, 0x3f2b22, 1).setDepth(3);
-      this.add.rectangle(x, y + 2, 7, 9, 0xf4b85d, 0.9).setDepth(4);
-    }
-
-    // mill
-    this.add.rectangle(844, 340, 68, 48, 0x5d3b25).setDepth(3).setStrokeStyle(2, C.gold, 0.35);
-    const wheel = this.add.circle(805, 354, 30, 0x2c2016, 1).setStrokeStyle(5, 0xa5793e, 1).setDepth(4);
-    for (let a = 0; a < 8; a++) {
-      const spoke = this.add.rectangle(805, 354, 2, 54, 0xc39655).setAngle(a * 22.5).setDepth(4);
-      spoke.setAlpha(0.7);
-    }
-    this.tweens.add({ targets: wheel, angle: 360, duration: 9000, repeat: -1 });
-
-    // swamp zone
-    this.add.rectangle(955, 530, 220, 200, C.swamp, 0.46).setDepth(2);
-    for (let i = 0; i < 14; i++) {
-      const x = Phaser.Math.Between(875, 1035);
-      const y = Phaser.Math.Between(450, 610);
-      this.add.rectangle(x, y, 7, Phaser.Math.Between(45, 90), 0x17241f, 0.9).setAngle(Phaser.Math.Between(-8, 8)).setDepth(3);
-      this.add.circle(x, y - 38, Phaser.Math.Between(18, 28), 0x16342f, 0.75).setDepth(3);
-    }
-
-    // foreground
-    this.add.rectangle(640, 686, 1280, 68, 0x050a08, 0.9).setDepth(10);
+  private refreshHud() {
+    this.profileText.setText(`Мавка • рівень ${state.level}     ❤ ${state.hp}/${state.maxHp}     ✦ ${state.mana}/${state.maxMana}`);
+    this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
   }
 
-  private drawTopBar() {
-    panel(this, 168, 62, 310, 94, 0.96).setDepth(20);
-    text(this, 38, 38, 'Мавка', 28, C.cream).setDepth(21);
-    small(this, 38, 65, 'Берегиня Пущі', '#dbc87d').setDepth(21);
-    text(this, 285, 42, '32', 24, '#f8dda0', 'center').setDepth(21);
-    this.add.rectangle(42, 89, 212, 14, 0x451713).setDepth(21);
-    this.add.rectangle(42, 89, 212, 14, 0xc54639).setOrigin(0, 0.5).setDepth(22);
-    small(this, 150, 89, '2480 / 2480', '#fff1e8', 'center').setDepth(23);
-    this.add.rectangle(42, 110, 212, 12, 0x13283f).setOrigin(0, 0.5).setDepth(21);
-    this.add.rectangle(42, 110, 190, 12, 0x367dcc).setOrigin(0, 0.5).setDepth(22);
-    small(this, 150, 110, '620 / 680', '#e3f1ff', 'center').setDepth(23);
-
-    const resources = [
-      { x: 540, icon: '●', value: '125 670', color: '#f6cb5a' },
-      { x: 720, icon: '◆', value: '1 280', color: '#66d9ff' },
-      { x: 890, icon: 'ϟ', value: '84 / 120', color: '#ffd16b' }
-    ];
-    resources.forEach((r) => {
-      panel(this, r.x, 48, 160, 48, 0.95).setDepth(20);
-      text(this, r.x - 62, 48, r.icon, 20, r.color, 'center').setDepth(21);
-      text(this, r.x + 12, 48, r.value, 18, C.cream, 'center').setDepth(21);
-      text(this, r.x + 66, 48, '+', 22, '#f3d47d', 'center').setDepth(21);
-    });
-    makeButton(this, 1010, 48, 54, 48, '✉', () => this.toast('Пошта з’явиться в наступному проході.')).box.setDepth(20);
-    makeButton(this, 1070, 48, 54, 48, '⚙', () => this.toast('Налаштування прототипу ще мінімальні.')).box.setDepth(20);
-  }
-
-  private drawLandmarks() {
-    this.selectionGlow = this.add.circle(this.selected.x, this.selected.y, 34, 0xf4d67a, 0.12)
-      .setStrokeStyle(3, 0xffe090, 0.75)
-      .setDepth(12);
-
+  private makeLandmarks() {
     LANDMARKS.forEach((spot) => {
-      const marker = this.add.circle(spot.x, spot.y, 24, spot.color, 0.96)
-        .setStrokeStyle(3, C.gold2, 0.68)
-        .setDepth(13)
-        .setInteractive({ useHandCursor: true });
-      const icon = text(this, spot.x, spot.y - 1, spot.icon, 21, '#fff4c4', 'center').setDepth(14);
-      const plate = this.add.rectangle(spot.x, spot.y + 42, 184, 42, C.panel, 0.92)
-        .setStrokeStyle(1, C.gold, 0.66)
-        .setDepth(12)
-        .setInteractive({ useHandCursor: true });
-      const name = text(this, spot.x, spot.y + 34, spot.name, 16, C.cream, 'center').setDepth(13);
-      const sub = small(this, spot.x, spot.y + 53, spot.subtitle, '#cdbd94', 'center').setDepth(13);
-      [marker, plate].forEach((hit) => {
-        hit.on('pointerdown', () => this.selectLandmark(spot));
-        hit.on('pointerover', () => {
-          marker.setScale(1.08);
-          plate.setFillStyle(spot.color, 0.28);
-        });
-        hit.on('pointerout', () => {
-          marker.setScale(1);
-          plate.setFillStyle(C.panel, 0.92);
-        });
+      const hit = this.add.rectangle(spot.x, spot.y, spot.w, spot.h, 0x68d29a, 0.001)
+        .setStrokeStyle(2, 0xf1d58c, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(5);
+      const label = uiText(this, spot.x, spot.y - spot.h / 2 - 12, spot.name, 16, '#ffe7a8', 0.5)
+        .setDepth(6)
+        .setAlpha(0);
+      hit.on('pointerover', () => {
+        hit.setFillStyle(0x77d7a0, 0.08).setStrokeStyle(2, 0xf1d58c, 0.85);
+        label.setAlpha(1);
       });
-      icon.setAlpha(0.96);
-      name.setAlpha(0.98);
-      sub.setAlpha(0.9);
-    });
-  }
-
-  private drawQuestPanel() {
-    panel(this, 1150, 320, 238, 500, 0.95).setDepth(20);
-    text(this, 1048, 94, 'Завдання регіону', 22, '#f3d98e').setDepth(21);
-    small(this, 1240, 94, '3 активні', '#73d4bd', 'right').setDepth(21);
-
-    const questY = [138, 225, 312];
-    const questData = [
-      ['Голос старого дуба', 'Дізнайся, що турбує духів\nу Серці Пущі.', '0/3'],
-      ['Стежками мисливця', 'Знайди сліди мисливця\nбіля старого мосту.', '1/4'],
-      ['Чисті джерела', 'Очисти джерело біля млина\nвід темної скверни.', '0/1']
-    ];
-    questData.forEach((q, i) => {
-      this.add.rectangle(1150, questY[i], 210, 74, i === 0 ? 0x3a2b16 : 0x0f1b17, 0.9)
-        .setStrokeStyle(1, i === 0 ? C.gold : 0x5a6b5d, 0.55)
-        .setDepth(21);
-      text(this, 1056, questY[i] - 20, q[0], 16, i === 0 ? '#f2d984' : C.cream).setDepth(22);
-      small(this, 1056, questY[i] + 4, q[1], '#c6baa0').setDepth(22);
-      small(this, 1235, questY[i] + 22, q[2], '#7ad8c2', 'right').setDepth(22);
-    });
-
-    text(this, 1048, 375, 'Нагороди регіону', 17, '#f3d98e').setDepth(21);
-    ['✦', '♣', '◆', '◈'].forEach((icon, i) => {
-      this.add.rectangle(1070 + i * 50, 420, 40, 40, 0x14231b, 1).setStrokeStyle(1, C.gold, 0.6).setDepth(21);
-      text(this, 1070 + i * 50, 420, icon, 19, ['#7bdd96','#c690f1','#62d8ec','#f4c661'][i], 'center').setDepth(22);
-    });
-    small(this, 1048, 464, 'Прототип: обери локацію на сцені.\nТуманні Болота запускають реальний бій.', '#d1c39c').setDepth(21);
-  }
-
-  private drawSelectionPanel() {
-    panel(this, 1120, 595, 290, 128, 0.98).setDepth(20);
-    this.titleText = text(this, 995, 555, '', 21, '#f5db91').setDepth(21);
-    this.subtitleText = small(this, 995, 582, '', '#d3c8aa').setDepth(21);
-    this.actionButton = this.add.rectangle(1120, 630, 248, 44, C.panel2, 1)
-      .setStrokeStyle(2, C.gold, 0.9)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(21);
-    this.actionText = text(this, 1120, 630, 'Відвідати', 18, C.cream, 'center').setDepth(22);
-    this.actionButton.on('pointerdown', () => this.activateSelected());
-    this.actionButton.on('pointerover', () => this.actionButton.setFillStyle(C.gold, 0.2));
-    this.actionButton.on('pointerout', () => this.actionButton.setFillStyle(C.panel2, 1));
-  }
-
-  private drawBottomBar() {
-    const buttons = [
-      ['Карта', 'Живий регіон'],
-      ['Завдання', 'Сюжет і події'],
-      ['Загін', 'Герої та ролі'],
-      ['Крамниця', 'Ресурси'],
-      ['Чат', 'Гравці поруч']
-    ];
-    buttons.forEach((b, i) => {
-      const x = 115 + i * 170;
-      makeButton(this, x, 682, 158, 48, b[0], () => this.toast(`${b[0]}: вкладка буде розширена далі.`), i === 0 ? 0xf1c45f : C.gold);
-      small(this, x, 703, b[1], '#b9ab85', 'center').setDepth(22);
-    });
-    this.statusText = small(this, 930, 690, 'MVP • Серце Пущі', '#79d7b6').setDepth(22);
-  }
-
-  private selectLandmark(spot: LandmarkData) {
-    this.selected = spot;
-    if (this.selectionGlow) {
-      this.tweens.add({
-        targets: this.selectionGlow,
-        x: spot.x,
-        y: spot.y,
-        duration: 240,
-        ease: 'Sine.out'
+      hit.on('pointerout', () => {
+        hit.setFillStyle(0x68d29a, 0.001).setStrokeStyle(2, 0xf1d58c, 0);
+        label.setAlpha(0);
       });
-    }
-    if (this.titleText) this.titleText.setText(spot.name);
-    if (this.subtitleText) this.subtitleText.setText(spot.subtitle);
-    if (this.actionText) this.actionText.setText(spot.battle ? 'Увійти в бій' : 'Відвідати');
-    if (this.actionButton) this.actionButton.setStrokeStyle(2, spot.battle ? 0x72e0bd : C.gold, 0.95);
-    this.toast(`Обрано: ${spot.name}`);
+      hit.on('pointerdown', () => this.openLandmark(spot));
+    });
   }
 
-  private activateSelected() {
-    if (this.selected.battle) {
-      this.scene.start('battle');
+  private makeNav() {
+    const items = [
+      { x: 150, label: 'Карта', action: () => this.closeModal() },
+      { x: 405, label: 'Завдання', action: () => this.openQuests() },
+      { x: 665, label: 'Рюкзак', action: () => this.openInventory() },
+      { x: 930, label: 'Табір', action: () => this.openCamp() }
+    ];
+    items.forEach((item) => {
+      const hit = this.add.rectangle(item.x, 675, 220, 64, 0xf0d18c, 0.001)
+        .setInteractive({ useHandCursor: true }).setDepth(20);
+      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.08));
+      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001));
+      hit.on('pointerdown', item.action);
+    });
+  }
+
+  private openLandmark(spot: Landmark) {
+    visit(state, spot.id);
+    saveState(state);
+    if (spot.id === 'swamp') {
+      this.openSwamp();
       return;
     }
-    this.toast(`${this.selected.name}: локацію відкрито. Для бою обери Туманні Болота.`);
-    this.cameras.main.flash(180, 220, 190, 100, false);
+    if (spot.id === 'settlement') this.openSettlement();
+    if (spot.id === 'oak') this.openOak();
+    if (spot.id === 'shrine') this.openShrine();
+    if (spot.id === 'hunter') this.openHunter();
+    if (spot.id === 'yarin') this.openYarin();
+    if (spot.id === 'mill') this.openMill();
+  }
+
+  private baseModal(title: string, subtitle: string, width = 640, height = 430) {
+    this.closeModal();
+    const c = this.add.container(0, 0).setDepth(80);
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setInteractive();
+    const parts = ornatePanel(this, W / 2, H / 2, width, height);
+    const heading = gameText(this, W / 2, H / 2 - height / 2 + 48, title, 28, GOLD_LIGHT, 0.5);
+    const sub = uiText(this, W / 2, H / 2 - height / 2 + 82, subtitle, 15, '#bfcbbb', 0.5);
+    const x = uiText(this, W / 2 + width / 2 - 30, H / 2 - height / 2 + 30, '✕', 22, '#f4dda1', 0.5)
+      .setInteractive({ useHandCursor: true });
+    x.on('pointerdown', () => this.closeModal());
+    c.add([shade, ...parts, heading, sub, x]);
+    this.modal = c;
+    return c;
+  }
+
+  private addModalButton(c: Phaser.GameObjects.Container, x: number, y: number, label: string, fn: () => void, accent = GOLD) {
+    const b = button(this, x, y, 220, 48, label, fn, accent);
+    c.add([b.box, b.label]);
+  }
+
+  private openSettlement() {
+    const c = this.baseModal('Поселення Мавки', 'Безпечне місце для відпочинку й підготовки');
+    const status = uiText(this, W / 2, 330, `Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`, 17, '#d9d1ba', 0.5);
+    c.add(status);
+    this.addModalButton(c, 510, 420, 'Відпочити • 120 ◉', () => {
+      if (state.coins < 120) return this.toast('Недостатньо монет.');
+      state.coins -= 120;
+      state.hp = state.maxHp;
+      state.mana = state.maxMana;
+      saveState(state);
+      this.refreshHud();
+      status.setText(`Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`);
+      this.toast('Мавка відпочила та відновила сили.');
+    }, 0x64bd85);
+    this.addModalButton(c, 770, 420, 'Купити зілля • 90 ◉', () => {
+      if (state.coins < 90) return this.toast('Недостатньо монет.');
+      state.coins -= 90;
+      state.potions += 1;
+      saveState(state);
+      this.refreshHud();
+      status.setText(`Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`);
+      this.toast('Зілля додано до рюкзака.');
+    });
+  }
+
+  private openOak() {
+    const c = this.baseModal('Старий Дуб', 'Давній дух Пущі пам’ятає тих, хто повертається', 620, 400);
+    const today = todayKey();
+    const ready = state.lastBlessing !== today;
+    const body = uiText(
+      this,
+      W / 2,
+      340,
+      ready ? 'Сьогодні Дуб готовий дати благословення.' : 'Сьогодні благословення вже отримано. Повертайся завтра.',
+      17,
+      '#d9d1ba',
+      0.5
+    ).setWordWrapWidth(500).setAlign('center');
+    c.add(body);
+    this.addModalButton(c, W / 2, 435, ready ? 'Отримати благословення' : 'Вже отримано', () => {
+      if (state.lastBlessing === today) return this.toast('Благословення вже отримано.');
+      state.lastBlessing = today;
+      state.herbs += 12;
+      state.mana = state.maxMana;
+      state.quests.oak = Math.min(3, state.quests.oak + 1);
+      const leveled = gainXp(state, 80);
+      saveState(state);
+      this.refreshHud();
+      body.setText(leveled ? 'Дуб благословив Мавку. Новий рівень!' : '+12 трав • +80 досвіду • мана відновлена');
+      this.toast('Благословення Старого Дуба отримано.');
+    }, ready ? 0x68bd83 : 0x6b6b61);
+  }
+
+  private openShrine() {
+    const c = this.baseModal('Святилище', 'Місце, де Пуща відновлює внутрішню силу', 620, 400);
+    const info = uiText(this, W / 2, 335, `Мана: ${state.mana}/${state.maxMana}`, 20, '#a9e6ef', 0.5);
+    c.add(info);
+    this.addModalButton(c, W / 2, 430, 'Медитація • 8 ☘', () => {
+      if (state.herbs < 8) return this.toast('Потрібно 8 лікарських трав.');
+      state.herbs -= 8;
+      state.mana = state.maxMana;
+      saveState(state);
+      this.refreshHud();
+      info.setText(`Мана: ${state.mana}/${state.maxMana} • відновлено`);
+      this.toast('Мана повністю відновлена.');
+    }, CYAN);
+  }
+
+  private openHunter() {
+    const c = this.baseModal('Стежка Мисливця', 'Коротка експедиція за ресурсами', 650, 420);
+    const info = uiText(this, W / 2, 325, 'Експедиція коштує 20 мани. Результат: трави, монети й досвід.', 17, '#d9d1ba', 0.5)
+      .setWordWrapWidth(520).setAlign('center');
+    c.add(info);
+    this.addModalButton(c, W / 2, 430, 'Вирушити на полювання', () => {
+      if (state.mana < 20) return this.toast('Недостатньо мани.');
+      state.mana -= 20;
+      const herbs = Phaser.Math.Between(8, 18);
+      const coins = Phaser.Math.Between(90, 180);
+      state.herbs += herbs;
+      state.coins += coins;
+      state.quests.hunter = Math.min(4, state.quests.hunter + 1);
+      const leveled = gainXp(state, 65);
+      saveState(state);
+      this.refreshHud();
+      info.setText(`Знайдено: +${herbs} ☘  +${coins} ◉  +65 XP${leveled ? ' • НОВИЙ РІВЕНЬ' : ''}`);
+      this.toast('Експедиція завершена.');
+    }, 0x70b483);
+  }
+
+  private openYarin() {
+    const c = this.baseModal('Ярин Дол', 'Тихі поля з рідкісними лікарськими травами', 620, 390);
+    const info = uiText(this, W / 2, 335, 'Можна зібрати невеликий запас трав.', 17, '#d9d1ba', 0.5);
+    c.add(info);
+    this.addModalButton(c, W / 2, 420, 'Зібрати трави', () => {
+      const found = Phaser.Math.Between(5, 12);
+      state.herbs += found;
+      saveState(state);
+      this.refreshHud();
+      info.setText(`Зібрано +${found} ☘`);
+      this.toast('Трави додано до запасів.');
+    }, 0x7bbd76);
+  }
+
+  private openMill() {
+    const c = this.baseModal('Старий Млин', 'Мельник торгує припасами й знає місцеві чутки', 690, 450);
+    const info = uiText(this, W / 2, 310, `Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`, 16, '#d9d1ba', 0.5);
+    c.add(info);
+    this.addModalButton(c, 505, 410, 'Зілля • 90 ◉', () => {
+      if (state.coins < 90) return this.toast('Недостатньо монет.');
+      state.coins -= 90;
+      state.potions += 1;
+      state.quests.mill = 1;
+      saveState(state);
+      this.refreshHud();
+      info.setText(`Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`);
+    });
+    this.addModalButton(c, 775, 410, 'Ефір • 2 ◆', () => {
+      if (state.crystals < 2) return this.toast('Недостатньо кристалів.');
+      state.crystals -= 2;
+      state.ether += 1;
+      saveState(state);
+      this.refreshHud();
+      info.setText(`Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`);
+    }, CYAN);
+  }
+
+  private openSwamp() {
+    const c = this.baseModal('Туманні Болота', 'Небезпечна бойова зона • рекомендований рівень 5+', 680, 470);
+    const lines = [
+      'Болотний Хранитель',
+      `Перемог над Хранителем: ${state.bossWins}`,
+      'Нагорода: монети • досвід • трави • шанс кристала',
+      'Навички: Іскра • Коріння • Вовк • Вітер • Серце Пущі'
+    ];
+    const info = uiText(this, W / 2, 340, lines.join('\n'), 17, '#d9d1ba', 0.5)
+      .setWordWrapWidth(540).setAlign('center').setLineSpacing(8);
+    c.add(info);
+    this.addModalButton(c, W / 2, 485, 'Увійти в бій', () => {
+      this.closeModal();
+      this.cameras.main.fadeOut(240, 0, 0, 0);
+      this.time.delayedCall(250, () => this.scene.start('battle'));
+    }, 0x61c690);
+  }
+
+  private openQuests() {
+    const c = this.baseModal('Завдання', 'Основні цілі поточного регіону', 720, 500);
+    const quests = [
+      ['Голос Старого Дуба', state.quests.oak, 3],
+      ['Стежками мисливця', state.quests.hunter, 4],
+      ['Таємниця Старого Млина', state.quests.mill, 1],
+      ['Очистити Туманні Болота', state.quests.swamp, 1]
+    ] as const;
+    quests.forEach((q, i) => {
+      const y = 270 + i * 65;
+      const done = q[1] >= q[2];
+      const box = this.add.rectangle(W / 2, y, 580, 52, done ? 0x183728 : 0x111b17, 0.95)
+        .setStrokeStyle(1, done ? 0x6bc58b : 0x806b42, 0.8);
+      const name = uiText(this, 380, y - 6, q[0], 16, done ? '#a8e8bb' : '#f1e5ca');
+      const progress = uiText(this, 890, y + 8, done ? 'Виконано' : `${q[1]}/${q[2]}`, 14, done ? '#78d497' : '#e0c77e', 1);
+      c.add([box, name, progress]);
+    });
+  }
+
+  private openInventory() {
+    const c = this.baseModal('Рюкзак і спорядження', 'Постійні ресурси та розвиток героя', 760, 510);
+    const lines = [
+      `Посох Пущі • рівень ${state.weaponLevel}`,
+      `Лісова броня • рівень ${state.armorLevel}`,
+      `Вовк-компаньйон • рівень ${state.wolfLevel}`,
+      '',
+      `Зілля здоров’я: ${state.potions}`,
+      `Ефір: ${state.ether}`,
+      `Лікарські трави: ${state.herbs}`
+    ];
+    const info = uiText(this, 400, 340, lines.join('\n'), 17, '#e0d7bf').setLineSpacing(8);
+    c.add(info);
+    this.addModalButton(c, 820, 350, `Посох +1 • ${500 * state.weaponLevel} ◉`, () => {
+      const cost = 500 * state.weaponLevel;
+      if (state.coins < cost) return this.toast('Недостатньо монет.');
+      state.coins -= cost;
+      state.weaponLevel += 1;
+      saveState(state);
+      this.refreshHud();
+      this.closeModal();
+      this.openInventory();
+    }, 0xc99c4f);
+    this.addModalButton(c, 820, 415, `Вовк +1 • ${4 * state.wolfLevel} ◆`, () => {
+      const cost = 4 * state.wolfLevel;
+      if (state.crystals < cost) return this.toast('Недостатньо кристалів.');
+      state.crystals -= cost;
+      state.wolfLevel += 1;
+      saveState(state);
+      this.refreshHud();
+      this.closeModal();
+      this.openInventory();
+    }, CYAN);
+  }
+
+  private openCamp() {
+    const c = this.baseModal('Табір', 'Поточний стан Мавки та збереження прогресу', 680, 450);
+    const needed = xpNeeded(state.level);
+    const info = uiText(
+      this,
+      W / 2,
+      325,
+      `Рівень ${state.level} • XP ${state.xp}/${needed}\nЗдоров’я ${state.hp}/${state.maxHp} • Мана ${state.mana}/${state.maxMana}\nПеремог у боях: ${state.battlesWon} • Відвідано місць: ${state.locationsVisited.length}`,
+      17,
+      '#d9d1ba',
+      0.5
+    ).setAlign('center').setLineSpacing(8);
+    c.add(info);
+    this.addModalButton(c, 505, 435, 'Зберегти зараз', () => {
+      saveState(state);
+      this.toast('Прогрес збережено.');
+    }, 0x65b883);
+    this.addModalButton(c, 775, 435, 'Головне меню', () => this.scene.start('title'), 0xa77a49);
   }
 
   private toast(message: string) {
-    this.statusText?.setText(message);
-    this.time.delayedCall(2400, () => {
-      if (this.statusText?.active) this.statusText.setText('MVP • Серце Пущі');
-    });
+    this.toastText.setText(message).setAlpha(1);
+    this.tweens.killTweensOf(this.toastText);
+    this.tweens.add({ targets: this.toastText, alpha: 0, delay: 1700, duration: 400 });
+  }
+
+  private closeModal() {
+    this.modal?.destroy(true);
+    this.modal = undefined;
   }
 }
 
+type Skill = {
+  name: string;
+  cost: number;
+  cooldown: number;
+  color: number;
+};
+
+const SKILLS: Skill[] = [
+  { name: 'Лісова Іскра', cost: 20, cooldown: 1700, color: 0x55d77c },
+  { name: 'Коріння', cost: 28, cooldown: 3300, color: 0x7ea845 },
+  { name: 'Поклик Вовка', cost: 26, cooldown: 2600, color: 0x62aee4 },
+  { name: 'Танець Вітру', cost: 22, cooldown: 2300, color: 0x68d8dc },
+  { name: 'Серце Пущі', cost: 35, cooldown: 4200, color: 0xf0cb68 }
+];
+
 class BattleScene extends Phaser.Scene {
-  private heroMax = 2150;
-  private heroHp = 2150;
-  private manaMax = 680;
-  private mana = 680;
-  private enemyMax = 3200;
-  private enemyHp = 3200;
-  private heroHpBar!: Phaser.GameObjects.Rectangle;
-  private manaBar!: Phaser.GameObjects.Rectangle;
-  private enemyHpBar!: Phaser.GameObjects.Rectangle;
-  private heroHpText!: Phaser.GameObjects.Text;
-  private manaText!: Phaser.GameObjects.Text;
-  private enemyHpText!: Phaser.GameObjects.Text;
-  private battleLog!: Phaser.GameObjects.Text;
-  private hero!: Phaser.GameObjects.Container;
-  private wolf!: Phaser.GameObjects.Container;
-  private enemy!: Phaser.GameObjects.Container;
+  private heroHp = 0;
+  private heroMana = 0;
+  private enemyMax = 0;
+  private enemyHp = 0;
   private busy = false;
   private rooted = false;
-  private dodging = false;
+  private guarded = false;
   private auto = false;
+  private cooldowns = [false, false, false, false, false];
+  private hpFill!: Phaser.GameObjects.Rectangle;
+  private manaFill!: Phaser.GameObjects.Rectangle;
+  private enemyFill!: Phaser.GameObjects.Rectangle;
+  private hpText!: Phaser.GameObjects.Text;
+  private manaText!: Phaser.GameObjects.Text;
+  private enemyText!: Phaser.GameObjects.Text;
+  private logText!: Phaser.GameObjects.Text;
   private autoText!: Phaser.GameObjects.Text;
-  private skillCooldown = [false, false, false, false, false];
+  private skillOverlays: Phaser.GameObjects.Rectangle[] = [];
+  private skillCdTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('battle');
   }
 
   create() {
-    this.heroHp = this.heroMax;
-    this.mana = this.manaMax;
+    background(this, 'battle-bg');
+    this.heroHp = Math.max(1, state.hp);
+    this.heroMana = Math.max(0, state.mana);
+    this.enemyMax = 980 + state.bossWins * 120;
     this.enemyHp = this.enemyMax;
     this.busy = false;
     this.rooted = false;
-    this.dodging = false;
+    this.guarded = false;
     this.auto = false;
-    this.skillCooldown = [false, false, false, false, false];
+    this.cooldowns = [false, false, false, false, false];
 
-    this.drawBattlefield();
-    this.drawActors();
-    this.drawHUD();
+    this.add.rectangle(W / 2, 28, W, 56, 0x020806, 0.44).setDepth(20);
+    this.drawBars();
     this.drawSkills();
-    this.updateBars();
+    this.drawBattleControls();
+    this.refreshBars();
     this.log('Бій розпочато. Обери навичку.');
+    this.cameras.main.fadeIn(220, 0, 0, 0);
+
+    this.input.keyboard?.on('keydown-ONE', () => this.useSkill(0));
+    this.input.keyboard?.on('keydown-TWO', () => this.useSkill(1));
+    this.input.keyboard?.on('keydown-THREE', () => this.useSkill(2));
+    this.input.keyboard?.on('keydown-FOUR', () => this.useSkill(3));
+    this.input.keyboard?.on('keydown-FIVE', () => this.useSkill(4));
 
     this.time.addEvent({
-      delay: 1650,
+      delay: 900,
       loop: true,
       callback: () => {
         if (!this.auto || this.busy || this.enemyHp <= 0 || this.heroHp <= 0) return;
-        const choices = [0, 1, 2, 3, 4].filter((i) => !this.skillCooldown[i]);
-        if (choices.length) this.useSkill(Phaser.Utils.Array.GetRandom(choices));
+        const available = [0, 1, 2, 3, 4].filter(i => !this.cooldowns[i] && this.heroMana >= SKILLS[i].cost);
+        if (available.length) this.useSkill(Phaser.Utils.Array.GetRandom(available));
       }
     });
   }
 
-  private drawBattlefield() {
-    this.add.rectangle(640, 360, 1280, 720, 0x07120f);
-    this.add.rectangle(640, 160, 1280, 320, 0x153b39, 0.7);
+  private drawBars() {
+    const heroX = 88;
+    this.add.rectangle(heroX, 33, 300, 18, 0x29100e, 0.92).setOrigin(0, 0.5).setDepth(30);
+    this.hpFill = this.add.rectangle(heroX, 33, 300, 18, RED, 1).setOrigin(0, 0.5).setDepth(31);
+    this.hpText = uiText(this, heroX + 150, 33, '', 13, '#fff6e8', 0.5).setDepth(32);
+    this.add.rectangle(heroX, 54, 300, 12, 0x0c2233, 0.92).setOrigin(0, 0.5).setDepth(30);
+    this.manaFill = this.add.rectangle(heroX, 54, 300, 12, 0x3b92d0, 1).setOrigin(0, 0.5).setDepth(31);
+    this.manaText = uiText(this, heroX + 150, 54, '', 11, '#eef8ff', 0.5).setDepth(32);
 
-    const mist = this.add.graphics();
-    mist.fillStyle(0x164c49, 0.35);
-    mist.fillCircle(170, 400, 180);
-    mist.fillCircle(430, 440, 220);
-    mist.fillCircle(810, 420, 260);
-    mist.fillCircle(1090, 410, 210);
-
-    // distant forest
-    for (let i = 0; i < 35; i++) {
-      const x = i * 42 + Phaser.Math.Between(-18, 18);
-      const h = Phaser.Math.Between(80, 210);
-      this.add.triangle(x, 310, -35, h / 2, 0, -h / 2, 35, h / 2, i % 2 ? 0x0e2b24 : 0x12362b, 0.95);
-      this.add.rectangle(x, 332, 8, 66, 0x34291f, 0.8);
-    }
-
-    this.add.rectangle(640, 505, 1280, 190, 0x11251c, 0.96);
-    for (let i = 0; i < 16; i++) {
-      const glow = this.add.circle(Phaser.Math.Between(60, 1220), Phaser.Math.Between(300, 540), 3, 0x85e7a0, 0.4);
-      this.tweens.add({ targets: glow, alpha: { from: 0.15, to: 0.8 }, y: glow.y - 18, duration: Phaser.Math.Between(1100, 2400), yoyo: true, repeat: -1 });
-    }
-
-    // moon/rune
-    const moon = this.add.circle(640, 126, 70, 0xf5df9a, 0.12).setStrokeStyle(3, 0xf1d27c, 0.35);
-    this.tweens.add({ targets: moon, alpha: { from: 0.08, to: 0.2 }, duration: 2200, yoyo: true, repeat: -1 });
-  }
-
-  private drawActors() {
-    this.hero = this.add.container(320, 435);
-    const heroAura = this.add.circle(0, -15, 58, 0x55d287, 0.11).setStrokeStyle(2, 0x83efad, 0.28);
-    const body = this.add.rectangle(0, 0, 38, 92, 0x2d6847).setStrokeStyle(2, 0xe5d29b, 0.5);
-    const skirt = this.add.triangle(0, 54, -38, 35, 0, -30, 38, 35, 0x315e3d, 1);
-    const head = this.add.circle(0, -66, 22, 0xe8c8a8);
-    const hair = this.add.arc(0, -70, 27, 190, 350, false, 0x5a3e2a);
-    const staff = this.add.rectangle(40, -4, 7, 142, 0x6b4a29).setAngle(15);
-    const orb = this.add.circle(58, -72, 14, 0x78e7a0, 0.92).setStrokeStyle(3, 0xd5ffbd, 0.7);
-    this.hero.add([heroAura, skirt, body, head, hair, staff, orb]);
-    this.tweens.add({ targets: orb, scale: { from: 0.88, to: 1.14 }, alpha: { from: 0.7, to: 1 }, duration: 900, yoyo: true, repeat: -1 });
-
-    this.wolf = this.add.container(405, 480);
-    const wolfBody = this.add.ellipse(0, 0, 78, 40, 0xa8b0ac);
-    const wolfHead = this.add.circle(38, -10, 22, 0xb8c0bc);
-    const ear1 = this.add.triangle(30, -30, -8, 8, 0, -14, 8, 8, 0x9da5a1);
-    const ear2 = this.add.triangle(46, -30, -8, 8, 0, -14, 8, 8, 0x9da5a1);
-    const tail = this.add.rectangle(-46, -7, 42, 10, 0x8d9893).setAngle(-25);
-    this.wolf.add([tail, wolfBody, wolfHead, ear1, ear2]);
-
-    this.enemy = this.add.container(900, 390);
-    const root1 = this.add.rectangle(-48, 68, 28, 120, 0x372a20).setAngle(18);
-    const root2 = this.add.rectangle(50, 70, 30, 130, 0x372a20).setAngle(-18);
-    const torso = this.add.rectangle(0, 0, 116, 176, 0x3c3427).setStrokeStyle(4, 0x6d6138, 0.8);
-    const moss = this.add.circle(-18, -25, 62, 0x294a2d, 0.72);
-    const face = this.add.circle(0, -72, 45, 0x2c2922).setStrokeStyle(3, 0x60703c, 0.7);
-    const eye1 = this.add.circle(-15, -76, 6, 0x8aff67, 1);
-    const eye2 = this.add.circle(15, -76, 6, 0x8aff67, 1);
-    const mouth = this.add.rectangle(0, -55, 30, 7, 0x7dff5d, 0.65);
-    const arm1 = this.add.rectangle(-78, -5, 32, 140, 0x403629).setAngle(45);
-    const arm2 = this.add.rectangle(78, -5, 32, 140, 0x403629).setAngle(-45);
-    const antlerL = this.add.triangle(-28, -132, -38, 28, 0, -42, 20, 28, 0x4a3a26);
-    const antlerR = this.add.triangle(28, -132, -20, 28, 0, -42, 38, 28, 0x4a3a26);
-    const poisonGlow = this.add.circle(0, 0, 105, 0x56f24b, 0.08);
-    this.enemy.add([poisonGlow, root1, root2, torso, moss, face, eye1, eye2, mouth, arm1, arm2, antlerL, antlerR]);
-    this.tweens.add({ targets: poisonGlow, scale: { from: 0.9, to: 1.12 }, alpha: { from: 0.04, to: 0.16 }, duration: 1300, yoyo: true, repeat: -1 });
-  }
-
-  private drawHUD() {
-    panel(this, 190, 77, 340, 118, 0.96);
-    text(this, 36, 38, 'Мавка', 28, C.cream);
-    small(this, 36, 62, 'Берегиня Пущі • рівень 32', '#d5c47d');
-    this.add.rectangle(36, 91, 250, 18, 0x3b1715).setOrigin(0, 0.5);
-    this.heroHpBar = this.add.rectangle(36, 91, 250, 18, 0xc8463a).setOrigin(0, 0.5);
-    this.heroHpText = small(this, 161, 91, '', '#fff5ef', 'center');
-    this.add.rectangle(36, 116, 250, 14, 0x12253d).setOrigin(0, 0.5);
-    this.manaBar = this.add.rectangle(36, 116, 250, 14, 0x3984d4).setOrigin(0, 0.5);
-    this.manaText = small(this, 161, 116, '', '#e9f5ff', 'center');
-
-    panel(this, 790, 64, 510, 84, 0.96);
-    text(this, 790, 38, 'Болотний Хранитель', 24, '#f3d686', 'center');
-    this.add.rectangle(580, 76, 420, 19, 0x381512).setOrigin(0, 0.5);
-    this.enemyHpBar = this.add.rectangle(580, 76, 420, 19, 0xb44033).setOrigin(0, 0.5);
-    this.enemyHpText = small(this, 790, 76, '', '#fff4e7', 'center');
-    small(this, 790, 99, 'Отрута • коріння • темна скверна', '#7bdd96', 'center');
-
-    panel(this, 1140, 326, 244, 370, 0.95);
-    text(this, 1038, 158, 'Журнал бою', 21, '#f0d283');
-    this.battleLog = small(this, 1038, 192, '', '#ddd2b6');
-    this.battleLog.setWordWrapWidth(206);
-    text(this, 1038, 426, 'Можлива здобич', 18, '#f0d283');
-    ['◆','♣','✦','◈','☘','□'].forEach((s, i) => {
-      const xx = 1064 + (i % 3) * 66;
-      const yy = 466 + Math.floor(i / 3) * 58;
-      this.add.rectangle(xx, yy, 48, 48, 0x13221c, 1).setStrokeStyle(1, C.gold, 0.5);
-      text(this, xx, yy, s, 20, ['#72e4a2','#b892e6','#66d8f1','#f4ca6a','#79cf8b','#d7d2c4'][i], 'center');
-    });
-
-    makeButton(this, 1140, 598, 205, 42, '← Серце Пущі', () => this.scene.start('region'), C.gold);
-    const auto = makeButton(this, 1140, 650, 205, 42, 'Автобій: ВИМК', () => {
-      this.auto = !this.auto;
-      this.autoText.setText(this.auto ? 'Автобій: УВІМК' : 'Автобій: ВИМК');
-      this.log(this.auto ? 'Автобій увімкнено.' : 'Автобій вимкнено.');
-    }, 0x64cfa1);
-    this.autoText = auto.labelText;
+    this.add.rectangle(560, 33, 430, 20, 0x28100e, 0.94).setOrigin(0, 0.5).setDepth(30);
+    this.enemyFill = this.add.rectangle(560, 33, 430, 20, 0xb63f35, 1).setOrigin(0, 0.5).setDepth(31);
+    this.enemyText = uiText(this, 775, 33, '', 13, '#fff3df', 0.5).setDepth(32);
   }
 
   private drawSkills() {
-    const names = [
-      ['Лісова Іскра', '30', 0x55c879],
-      ['Коріння', '40', 0x8cad52],
-      ['Поклик Вовка', '25', 0x5ba9ce],
-      ['Танець Вітру', '35', 0x75c7df],
-      ['Серце Пущі', '50', 0xcbb75f]
-    ] as const;
-
-    names.forEach((skill, i) => {
-      const x = 148 + i * 172;
-      const y = 642;
-      const box = this.add.rectangle(x, y, 156, 106, 0x101b17, 0.98)
-        .setStrokeStyle(2, skill[2], 0.9)
-        .setInteractive({ useHandCursor: true });
-      text(this, x - 60, y - 38, `${i + 1}`, 16, '#f6de98', 'center');
-      text(this, x, y - 12, skill[0], 17, C.cream, 'center');
-      small(this, x, y + 20, `мана ${skill[1]}`, '#78c9f0', 'center');
-      small(this, x, y + 41, i === 4 ? 'лікування' : 'атака / ефект', '#ad9f7f', 'center');
-      box.on('pointerdown', () => this.useSkill(i));
-      box.on('pointerover', () => box.setFillStyle(skill[2], 0.18));
-      box.on('pointerout', () => box.setFillStyle(0x101b17, 0.98));
+    const xs = [248, 398, 548, 698, 848];
+    xs.forEach((x, i) => {
+      const hit = this.add.rectangle(x, 645, 126, 110, SKILLS[i].color, 0.001)
+        .setStrokeStyle(2, SKILLS[i].color, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(35);
+      const cd = uiText(this, x, 645, '', 18, '#fff4d8', 0.5).setDepth(37);
+      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.11).setStrokeStyle(2, SKILLS[i].color, 0.9));
+      hit.on('pointerout', () => hit.setFillStyle(SKILLS[i].color, 0.001).setStrokeStyle(2, SKILLS[i].color, 0));
+      hit.on('pointerdown', () => this.useSkill(i));
+      this.skillOverlays.push(hit);
+      this.skillCdTexts.push(cd);
     });
   }
 
+  private drawBattleControls() {
+    const potion = button(this, 1045, 595, 175, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
+    potion.box.setDepth(40); potion.label.setDepth(41);
+    const auto = button(this, 1045, 648, 175, 42, 'Автобій: ВИМК', () => {
+      this.auto = !this.auto;
+      this.autoText.setText(this.auto ? 'Автобій: УВІМК' : 'Автобій: ВИМК');
+      this.log(this.auto ? 'Автобій увімкнено.' : 'Автобій вимкнено.');
+    }, 0x66c598);
+    auto.box.setDepth(40); auto.label.setDepth(41);
+    this.autoText = auto.label;
+
+    const retreat = button(this, 1180, 86, 150, 38, 'Відступити', () => {
+      state.hp = Math.max(1, this.heroHp);
+      state.mana = this.heroMana;
+      saveState(state);
+      this.scene.start('region');
+    }, 0xa7784e);
+    retreat.box.setDepth(40); retreat.label.setDepth(41);
+
+    this.logText = uiText(this, 1045, 445, '', 14, '#e9dfc8', 0.5)
+      .setWordWrapWidth(300).setAlign('center').setDepth(42);
+  }
+
   private useSkill(index: number) {
-    if (this.busy || this.enemyHp <= 0 || this.heroHp <= 0 || this.skillCooldown[index]) return;
-    const costs = [30, 40, 25, 35, 50];
-    if (this.mana < costs[index]) {
+    const skill = SKILLS[index];
+    if (this.busy || this.enemyHp <= 0 || this.heroHp <= 0 || this.cooldowns[index]) return;
+    if (this.heroMana < skill.cost) {
       this.log('Недостатньо мани.');
+      this.flashMessage('МАНА', '#70c9ff');
       return;
     }
 
     this.busy = true;
-    this.mana -= costs[index];
-    this.skillCooldown[index] = true;
-    this.time.delayedCall(index === 4 ? 3800 : 2600, () => { this.skillCooldown[index] = false; });
-    this.updateBars();
+    this.heroMana -= skill.cost;
+    this.cooldowns[index] = true;
+    this.startCooldown(index, skill.cooldown);
 
-    const skillNames = ['Лісова Іскра', 'Коріння', 'Поклик Вовка', 'Танець Вітру', 'Серце Пущі'];
-
+    let damage = 0;
+    if (index === 0) damage = Phaser.Math.Between(105, 135) + state.weaponLevel * 12;
+    if (index === 1) {
+      damage = Phaser.Math.Between(60, 78) + state.weaponLevel * 7;
+      this.rooted = true;
+    }
+    if (index === 2) damage = Phaser.Math.Between(88, 116) + state.wolfLevel * 18;
+    if (index === 3) {
+      damage = Phaser.Math.Between(74, 100) + state.weaponLevel * 8;
+      this.guarded = true;
+    }
     if (index === 4) {
-      const heal = 310;
-      this.heroHp = Math.min(this.heroMax, this.heroHp + heal);
-      this.mana = Math.min(this.manaMax, this.mana + 35);
-      const pulse = this.add.circle(this.hero.x, this.hero.y - 30, 26, 0xbfe783, 0.28).setStrokeStyle(4, 0xe7f5a8, 0.8);
-      this.tweens.add({ targets: pulse, scale: 4, alpha: 0, duration: 650, onComplete: () => pulse.destroy() });
-      this.log(`${skillNames[index]}: +${heal} здоров’я.`);
-      this.updateBars();
-      this.time.delayedCall(520, () => this.enemyTurn());
-      return;
+      const heal = 105 + state.level * 5;
+      this.heroHp = Math.min(state.maxHp, this.heroHp + heal);
+      damage = Phaser.Math.Between(35, 55);
+      this.healEffect(heal);
     }
 
-    const damages = [330, 190, 280, 250, 0];
-    let damage = damages[index] + Phaser.Math.Between(-35, 55);
-    if (index === 1) this.rooted = true;
-    if (index === 3) this.dodging = true;
-
-    if (index === 2) {
-      this.tweens.add({
-        targets: this.wolf,
-        x: 760,
-        duration: 230,
-        yoyo: true,
-        ease: 'Sine.inOut'
-      });
-    } else {
-      this.tweens.add({
-        targets: this.hero,
-        x: 500,
-        duration: 220,
-        yoyo: true,
-        ease: 'Sine.inOut'
-      });
-    }
-
-    const slashColor = index === 1 ? 0x89c44d : index === 2 ? 0xaed4e4 : index === 3 ? 0x84d9ee : 0x78e6a0;
-    const slash = this.add.ellipse(740, 390, 250, 58, slashColor, 0.18).setAngle(-12).setStrokeStyle(5, slashColor, 0.86);
-    this.tweens.add({ targets: slash, x: 900, scaleX: 1.2, alpha: 0, duration: 360, onComplete: () => slash.destroy() });
-
-    this.time.delayedCall(260, () => {
+    this.skillEffect(index);
+    this.time.delayedCall(320, () => {
       this.enemyHp = Math.max(0, this.enemyHp - damage);
-      this.floatDamage(900, 290, `-${damage}`, '#ff825f');
-      this.cameras.main.shake(90, 0.006);
-      this.updateBars();
-      this.log(`${skillNames[index]} завдає ${damage} шкоди.`);
+      this.floatNumber(825, 310, `-${damage}`, '#ff8b68');
+      this.cameras.main.shake(80, 0.004);
+      this.log(`${skill.name}: ${damage} шкоди.`);
+      this.refreshBars();
+
       if (this.enemyHp <= 0) {
         this.victory();
-      } else {
-        this.time.delayedCall(420, () => this.enemyTurn());
+        return;
       }
+      this.time.delayedCall(430, () => this.enemyTurn());
+    });
+  }
+
+  private startCooldown(index: number, ms: number) {
+    const cdText = this.skillCdTexts[index];
+    const overlay = this.skillOverlays[index];
+    overlay.setFillStyle(0x000000, 0.35);
+    const start = this.time.now;
+    const timer = this.time.addEvent({
+      delay: 100,
+      loop: true,
+      callback: () => {
+        const left = Math.max(0, ms - (this.time.now - start));
+        cdText.setText(left > 0 ? `${(left / 1000).toFixed(1)}` : '');
+      }
+    });
+    this.time.delayedCall(ms, () => {
+      this.cooldowns[index] = false;
+      timer.destroy();
+      cdText.setText('');
+      overlay.setFillStyle(SKILLS[index].color, 0.001);
     });
   }
 
@@ -669,98 +739,150 @@ class BattleScene extends Phaser.Scene {
 
     if (this.rooted) {
       this.rooted = false;
-      this.log('Коріння стримує Хранителя — атака пропущена.');
+      this.log('Коріння скувало Хранителя. Його хід пропущено.');
+      this.heroMana = Math.min(state.maxMana, this.heroMana + 12);
       this.busy = false;
-      this.regenMana();
+      this.refreshBars();
       return;
     }
 
-    this.tweens.add({ targets: this.enemy, x: 780, duration: 240, yoyo: true, ease: 'Sine.inOut' });
-    this.time.delayedCall(240, () => {
-      let damage = Phaser.Math.Between(175, 255);
-      if (this.dodging) {
-        damage = Math.floor(damage * 0.25);
-        this.dodging = false;
-        this.log(`Танець Вітру зменшує удар до ${damage}.`);
+    const warning = this.add.circle(830, 320, 42, 0xff563d, 0.16).setStrokeStyle(3, 0xff8067, 0.8).setDepth(45);
+    this.tweens.add({ targets: warning, scale: 2.2, alpha: 0, duration: 420, onComplete: () => warning.destroy() });
+
+    this.time.delayedCall(280, () => {
+      let damage = Phaser.Math.Between(46, 72) + state.bossWins * 3;
+      if (this.guarded) {
+        damage = Math.floor(damage * 0.35);
+        this.guarded = false;
+        this.log(`Танець Вітру послабив удар до ${damage}.`);
       } else {
-        this.log(`Болотний Хранитель завдає ${damage} шкоди.`);
+        this.log(`Хранитель завдав ${damage} шкоди.`);
       }
       this.heroHp = Math.max(0, this.heroHp - damage);
-      this.floatDamage(335, 330, `-${damage}`, '#ffb379');
-      this.updateBars();
+      this.floatNumber(340, 365, `-${damage}`, '#ffba79');
+      this.cameras.main.shake(100, 0.006);
+      this.heroMana = Math.min(state.maxMana, this.heroMana + 11);
+      this.refreshBars();
+
       if (this.heroHp <= 0) this.defeat();
-      else {
-        this.busy = false;
-        this.regenMana();
+      else this.busy = false;
+    });
+  }
+
+  private skillEffect(index: number) {
+    const colors = [0x55ef81, 0x8fbd52, 0x77caff, 0x74e3e1, 0xf1d16d];
+    if (index === 2) {
+      const streak = this.add.ellipse(420, 430, 150, 55, colors[index], 0.34).setDepth(44);
+      this.tweens.add({ targets: streak, x: 820, alpha: 0, scaleX: 1.7, duration: 360, onComplete: () => streak.destroy() });
+      return;
+    }
+    if (index === 1) {
+      for (let i = 0; i < 6; i++) {
+        const root = this.add.rectangle(785 + i * 18, 430, 7, 105, colors[index], 0.55).setAngle(Phaser.Math.Between(-30, 30)).setDepth(44);
+        this.tweens.add({ targets: root, y: 370, alpha: 0, duration: 700, delay: i * 40, onComplete: () => root.destroy() });
       }
-    });
+      return;
+    }
+    const pulse = this.add.circle(index === 4 ? 360 : 760, index === 4 ? 380 : 340, 28, colors[index], 0.25)
+      .setStrokeStyle(5, colors[index], 0.85).setDepth(44);
+    this.tweens.add({ targets: pulse, scale: index === 4 ? 5 : 4, alpha: 0, x: index === 4 ? 360 : 840, duration: 520, onComplete: () => pulse.destroy() });
   }
 
-  private regenMana() {
-    this.mana = Math.min(this.manaMax, this.mana + 24);
-    this.updateBars();
+  private healEffect(value: number) {
+    this.floatNumber(340, 315, `+${value}`, '#8dff9e');
   }
 
-  private updateBars() {
-    this.heroHpBar.displayWidth = 250 * Math.max(0, this.heroHp / this.heroMax);
-    this.manaBar.displayWidth = 250 * Math.max(0, this.mana / this.manaMax);
-    this.enemyHpBar.displayWidth = 420 * Math.max(0, this.enemyHp / this.enemyMax);
-    this.heroHpText.setText(`${this.heroHp} / ${this.heroMax}`);
-    this.manaText.setText(`${this.mana} / ${this.manaMax}`);
-    this.enemyHpText.setText(`${this.enemyHp} / ${this.enemyMax}`);
+  private usePotion() {
+    if (this.busy || state.potions <= 0 || this.heroHp <= 0) return;
+    state.potions -= 1;
+    const heal = 170;
+    this.heroHp = Math.min(state.maxHp, this.heroHp + heal);
+    saveState(state);
+    this.healEffect(heal);
+    this.log(`Зілля відновило ${heal} здоров’я.`);
+    this.refreshBars();
   }
 
-  private floatDamage(x: number, y: number, value: string, color: string) {
-    const t = text(this, x, y, value, 34, color, 'center').setDepth(40);
-    this.tweens.add({
-      targets: t,
-      y: y - 70,
-      alpha: 0,
-      scale: 1.25,
-      duration: 720,
-      ease: 'Cubic.out',
-      onComplete: () => t.destroy()
-    });
+  private refreshBars() {
+    const hpRatio = Phaser.Math.Clamp(this.heroHp / state.maxHp, 0, 1);
+    const manaRatio = Phaser.Math.Clamp(this.heroMana / state.maxMana, 0, 1);
+    const enemyRatio = Phaser.Math.Clamp(this.enemyHp / this.enemyMax, 0, 1);
+    this.hpFill.displayWidth = 300 * hpRatio;
+    this.manaFill.displayWidth = 300 * manaRatio;
+    this.enemyFill.displayWidth = 430 * enemyRatio;
+    this.hpText.setText(`Мавка  ${this.heroHp}/${state.maxHp}`);
+    this.manaText.setText(`Мана ${this.heroMana}/${state.maxMana}`);
+    this.enemyText.setText(`Болотний Хранитель  ${this.enemyHp}/${this.enemyMax}`);
   }
 
   private log(message: string) {
-    const old = this.battleLog.text.split('\n').filter(Boolean).slice(-6);
-    old.push('• ' + message);
-    this.battleLog.setText(old.join('\n'));
+    this.logText?.setText(message);
+  }
+
+  private floatNumber(x: number, y: number, value: string, color: string) {
+    const t = gameText(this, x, y, value, 30, color, 0.5).setDepth(60);
+    this.tweens.add({ targets: t, y: y - 70, alpha: 0, scale: 1.25, duration: 720, onComplete: () => t.destroy() });
+  }
+
+  private flashMessage(value: string, color: string) {
+    const t = gameText(this, W / 2, 220, value, 30, color, 0.5).setDepth(70);
+    this.tweens.add({ targets: t, alpha: 0, y: 190, duration: 700, onComplete: () => t.destroy() });
   }
 
   private victory() {
     this.busy = true;
-    this.log('Перемога! Хранитель очищений.');
-    this.time.delayedCall(450, () => this.showEndModal(true));
+    const coins = Phaser.Math.Between(420, 620);
+    const herbs = Phaser.Math.Between(10, 18);
+    const crystals = Phaser.Math.Between(0, 100) < 35 ? 1 : 0;
+    const xp = 280 + state.bossWins * 25;
+
+    state.coins += coins;
+    state.herbs += herbs;
+    state.crystals += crystals;
+    state.bossWins += 1;
+    state.battlesWon += 1;
+    state.quests.swamp = 1;
+    state.hp = Math.max(1, this.heroHp);
+    state.mana = this.heroMana;
+    const levels = gainXp(state, xp);
+    saveState(state);
+
+    this.showEndModal(
+      'ПЕРЕМОГА',
+      `+${coins} монет   +${herbs} трав   +${xp} XP${crystals ? '   +1 кристал' : ''}${levels ? '   • НОВИЙ РІВЕНЬ' : ''}`,
+      true
+    );
   }
 
   private defeat() {
     this.busy = true;
-    this.log('Мавка відступає до Серця Пущі.');
-    this.time.delayedCall(450, () => this.showEndModal(false));
+    state.hp = Math.ceil(state.maxHp * 0.45);
+    state.mana = Math.ceil(state.maxMana * 0.5);
+    saveState(state);
+    this.showEndModal('ВІДСТУП', 'Пуща повернула Мавку до табору. Частину сил відновлено.', false);
   }
 
-  private showEndModal(won: boolean) {
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.58).setDepth(70);
-    panel(this, 640, 360, 480, 250, 0.99).setDepth(71);
-    text(this, 640, 300, won ? 'Перемога' : 'Поразка', 38, won ? '#dff3a3' : '#ef9c84', 'center').setDepth(72);
-    small(this, 640, 345, won ? 'Здобуто: 850 монет • 320 досвіду • лісова есенція' : 'Спробуй іншу комбінацію навичок.', '#d6c9a4', 'center').setDepth(72);
-    makeButton(this, 640, 395, 300, 50, won ? 'Повернутися в Серце Пущі' : 'Спробувати ще', () => {
-      if (won) this.scene.start('region');
-      else this.scene.restart();
-    }, won ? 0x7fbd75 : C.redBright).box.setDepth(72);
+  private showEndModal(title: string, body: string, won: boolean) {
+    const c = this.add.container(0, 0).setDepth(90);
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.62).setInteractive();
+    const parts = ornatePanel(this, W / 2, H / 2, 600, 300);
+    const heading = gameText(this, W / 2, 290, title, 40, won ? '#d8f2a5' : '#f1b096', 0.5);
+    const info = uiText(this, W / 2, 355, body, 17, '#e7dcc4', 0.5).setWordWrapWidth(500).setAlign('center');
+    const action = button(this, W / 2, 445, 280, 50, won ? 'Повернутися в Пущу' : 'До табору', () => this.scene.start('region'), won ? 0x69bd83 : 0xa9794e);
+    c.add([shade, ...parts, heading, info, action.box, action.label]);
   }
 }
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
+  parent: 'game',
   width: W,
   height: H,
-  parent: 'game',
-  backgroundColor: '#07110d',
+  backgroundColor: '#040a07',
   render: {
-    antialias: true
+    antialias: true,
+    pixelArt: false,
+    roundPixels: false
   },
   scale: {
     mode: Phaser.Scale.FIT,
@@ -768,7 +890,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: W,
     height: H
   },
-  scene: [RegionScene, BattleScene]
+  scene: [BootScene, TitleScene, RegionScene, BattleScene]
 };
 
 new Phaser.Game(config);
