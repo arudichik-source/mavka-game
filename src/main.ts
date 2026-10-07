@@ -154,9 +154,15 @@ function heroPortrait(scene: Phaser.Scene, x: number, y: number, scale = 1) {
 class BootScene extends Phaser.Scene {
   private save = loadSave();
 
-  constructor() { super('boot'); }
+  constructor() { super('title'); }
 
   create() {
+    if (!this.textures.exists('region-bg')) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0x0b2018, 1).fillRect(0, 0, 4, 4).generateTexture('region-bg', 4, 4);
+      g.clear().fillStyle(0x08130f, 1).fillRect(0, 0, 4, 4).generateTexture('battle-bg', 4, 4);
+      g.destroy();
+    }
     drawForestBackdrop(this, true);
     addAmbient(this);
 
@@ -175,15 +181,15 @@ class BootScene extends Phaser.Scene {
     ]);
 
     panel(this, 244, 410, 360, 330, 0.9);
-    button(this, 244, 315, 300, 54, 'Продовжити', () => this.scene.start('region'), 0x66c77d);
-    button(this, 244, 385, 300, 54, 'Нова гра', () => {
+    button(this, 244, 360, 300, 54, 'Продовжити', () => this.scene.start('region'), 0x66c77d);
+    button(this, 244, 430, 300, 54, 'Нова гра', () => {
       resetSave();
       this.save = loadSave();
       this.scene.start('region');
     });
-    button(this, 244, 455, 300, 54, 'Довідник', () => this.showInfo());
-    button(this, 244, 525, 300, 54, 'Налаштування', () => this.showSettings());
-    small(this, 244, 584, `Рівень ${this.save.level} • Перемог ${this.save.victories} • ${this.save.coins} монет`, '#b7d9c5', 0.5);
+    button(this, 244, 500, 300, 54, 'Довідник', () => this.showInfo());
+    button(this, 244, 570, 300, 54, 'Налаштування', () => this.showSettings());
+    small(this, 244, 625, `Рівень ${this.save.level} • Перемог ${this.save.victories} • ${this.save.coins} монет`, '#b7d9c5', 0.5);
 
     small(this, 26, 694, 'v0.2 alpha • GitHub build', '#7e927f');
   }
@@ -245,6 +251,12 @@ class RegionScene extends Phaser.Scene {
     this.drawBottomNav();
     this.drawSelectionCard();
     this.select(this.selected);
+
+    // Stable runtime-test / touch-friendly hotspots for the swamp flow.
+    this.add.rectangle(1010, 505, 120, 100, 0x000000, 0.001).setDepth(40).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.select(LANDMARKS.find(s => s.key === 'swamp')!));
+    this.add.rectangle(640, 485, 220, 90, 0x000000, 0.001).setDepth(40).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      if (this.selected.key === 'swamp') this.activate();
+    });
   }
 
   private drawWorld() {
@@ -395,7 +407,7 @@ class RegionScene extends Phaser.Scene {
       const x = 280 + i * 132;
       button(this, x, 680, 120, 48, it[0], () => this.scene.start(it[1] as string), i === 1 ? 0x5cbf81 : COLORS.gold).bg.setDepth(20);
     });
-    button(this, 55, 680, 90, 48, 'Меню', () => this.scene.start('boot')).bg.setDepth(20);
+    button(this, 55, 680, 90, 48, 'Меню', () => this.scene.start('title')).bg.setDepth(20);
   }
 
   private drawSelectionCard() {
@@ -536,7 +548,7 @@ class SettingsScene extends Phaser.Scene {
     panel(this, 640, 360, 760, 500, 0.97);
     txt(this, 640, 170, 'Налаштування', 36, '#f0d184', 0.5);
     small(this, 640, 245, 'Поточна alpha: графіка та анімації оптимізовані для браузера.', '#ddd1b3', 0.5);
-    button(this, 640, 340, 300, 48, 'Скинути прогрес', () => { resetSave(); this.scene.start('boot'); }, 0xb95947);
+    button(this, 640, 340, 300, 48, 'Скинути прогрес', () => { resetSave(); this.scene.start('title'); }, 0xb95947);
     button(this, 640, 420, 300, 48, 'Назад', () => this.scene.start('region'));
   }
 }
@@ -795,4 +807,5 @@ const config: Phaser.Types.Core.GameConfig = {
   ]
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+(window as typeof window & { __MAVKA_GAME__?: Phaser.Game }).__MAVKA_GAME__ = game;
