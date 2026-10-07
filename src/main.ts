@@ -3,6 +3,7 @@ import './styles.css';
 import { ATLAS_DATA_URI, FRAME_HEIGHT, FRAME_WIDTH } from './art/atlas';
 import {
   GameState,
+  QuestId,
   gainXp,
   loadState,
   resetState,
@@ -450,38 +451,82 @@ class RegionScene extends Phaser.Scene {
   }
 
   private openQuests() {
-    const c = this.baseModal('Завдання', 'Основні цілі поточного регіону', 720, 500);
-    const quests = [
-      ['Голос Старого Дуба', state.quests.oak, 3],
-      ['Стежками мисливця', state.quests.hunter, 4],
-      ['Таємниця Старого Млина', state.quests.mill, 1],
-      ['Очистити Туманні Болота', state.quests.swamp, 1]
-    ] as const;
+    const c = this.baseModal('Завдання', 'Виконуй цілі та забирай нагороди', 760, 530);
+    const quests: Array<{
+      id: QuestId;
+      name: string;
+      current: number;
+      target: number;
+      coins: number;
+      crystals: number;
+      xp: number;
+    }> = [
+      { id: 'oak', name: 'Голос Старого Дуба', current: state.quests.oak, target: 3, coins: 400, crystals: 2, xp: 200 },
+      { id: 'hunter', name: 'Стежками мисливця', current: state.quests.hunter, target: 4, coins: 500, crystals: 3, xp: 240 },
+      { id: 'mill', name: 'Таємниця Старого Млина', current: state.quests.mill, target: 1, coins: 350, crystals: 1, xp: 150 },
+      { id: 'swamp', name: 'Очистити Туманні Болота', current: state.quests.swamp, target: 1, coins: 700, crystals: 4, xp: 320 }
+    ];
+
     quests.forEach((q, i) => {
-      const y = 270 + i * 65;
-      const done = q[1] >= q[2];
-      const box = this.add.rectangle(W / 2, y, 580, 52, done ? 0x183728 : 0x111b17, 0.95)
+      const y = 255 + i * 72;
+      const done = q.current >= q.target;
+      const claimed = state.claimedQuests.includes(q.id);
+      const box = this.add.rectangle(W / 2, y, 620, 60, done ? 0x183728 : 0x111b17, 0.95)
         .setStrokeStyle(1, done ? 0x6bc58b : 0x806b42, 0.8);
-      const name = uiText(this, 380, y - 6, q[0], 16, done ? '#a8e8bb' : '#f1e5ca');
-      const progress = uiText(this, 890, y + 8, done ? 'Виконано' : `${q[1]}/${q[2]}`, 14, done ? '#78d497' : '#e0c77e', 1);
-      c.add([box, name, progress]);
+      const name = uiText(this, 360, y - 12, q.name, 16, done ? '#a8e8bb' : '#f1e5ca');
+      const reward = uiText(this, 360, y + 13, `Нагорода: ${q.coins} ◉  ${q.crystals} ◆  ${q.xp} XP`, 13, '#c9b984');
+      c.add([box, name, reward]);
+
+      if (done && !claimed) {
+        const claim = button(this, 885, y, 125, 36, 'Забрати', () => {
+          this.claimQuestReward(q.id, q.coins, q.crystals, q.xp);
+          this.closeModal();
+          this.openQuests();
+        }, 0x68bd83);
+        c.add([claim.box, claim.label]);
+      } else {
+        const progress = uiText(
+          this,
+          905,
+          y,
+          claimed ? 'Отримано' : `${q.current}/${q.target}`,
+          14,
+          claimed ? '#8eb89b' : '#e0c77e',
+          1
+        );
+        c.add(progress);
+      }
     });
   }
 
+  private claimQuestReward(id: QuestId, coins: number, crystals: number, xp: number) {
+    if (state.claimedQuests.includes(id)) return;
+    state.claimedQuests.push(id);
+    state.coins += coins;
+    state.crystals += crystals;
+    const levels = gainXp(state, xp);
+    saveState(state);
+    this.refreshHud();
+    this.toast(levels ? 'Нагороду отримано • новий рівень!' : 'Нагороду за завдання отримано.');
+  }
+
   private openInventory() {
-    const c = this.baseModal('Рюкзак і спорядження', 'Постійні ресурси та розвиток героя', 760, 510);
+    const c = this.baseModal('Рюкзак і спорядження', 'Постійні ресурси та розвиток героя', 780, 540);
     const lines = [
       `Посох Пущі • рівень ${state.weaponLevel}`,
       `Лісова броня • рівень ${state.armorLevel}`,
       `Вовк-компаньйон • рівень ${state.wolfLevel}`,
       '',
       `Зілля здоров’я: ${state.potions}`,
-      `Ефір: ${state.ether}`,
-      `Лікарські трави: ${state.herbs}`
+      `Ефір мани: ${state.ether}`,
+      `Лікарські трави: ${state.herbs}`,
+      '',
+      `Броня зменшує вхідну шкоду: ${Math.max(0, state.armorLevel - 1) * 6}`
     ];
-    const info = uiText(this, 400, 340, lines.join('\n'), 17, '#e0d7bf').setLineSpacing(8);
+    const info = uiText(this, 380, 350, lines.join('\n'), 16, '#e0d7bf').setLineSpacing(7);
     c.add(info);
-    this.addModalButton(c, 820, 350, `Посох +1 • ${500 * state.weaponLevel} ◉`, () => {
+
+    this.addModalButton(c, 840, 320, `Посох +1 • ${500 * state.weaponLevel} ◉`, () => {
       const cost = 500 * state.weaponLevel;
       if (state.coins < cost) return this.toast('Недостатньо монет.');
       state.coins -= cost;
@@ -491,7 +536,19 @@ class RegionScene extends Phaser.Scene {
       this.closeModal();
       this.openInventory();
     }, 0xc99c4f);
-    this.addModalButton(c, 820, 415, `Вовк +1 • ${4 * state.wolfLevel} ◆`, () => {
+
+    this.addModalButton(c, 840, 390, `Броня +1 • ${600 * state.armorLevel} ◉`, () => {
+      const cost = 600 * state.armorLevel;
+      if (state.coins < cost) return this.toast('Недостатньо монет.');
+      state.coins -= cost;
+      state.armorLevel += 1;
+      saveState(state);
+      this.refreshHud();
+      this.closeModal();
+      this.openInventory();
+    }, 0x9eaa70);
+
+    this.addModalButton(c, 840, 460, `Вовк +1 • ${4 * state.wolfLevel} ◆`, () => {
       const cost = 4 * state.wolfLevel;
       if (state.crystals < cost) return this.toast('Недостатньо кристалів.');
       state.crystals -= cost;
@@ -568,6 +625,8 @@ class BattleScene extends Phaser.Scene {
   private enemyText!: Phaser.GameObjects.Text;
   private logText!: Phaser.GameObjects.Text;
   private autoText!: Phaser.GameObjects.Text;
+  private potionText!: Phaser.GameObjects.Text;
+  private etherText!: Phaser.GameObjects.Text;
   private skillOverlays: Phaser.GameObjects.Rectangle[] = [];
   private skillCdTexts: Phaser.GameObjects.Text[] = [];
 
@@ -643,9 +702,15 @@ class BattleScene extends Phaser.Scene {
   }
 
   private drawBattleControls() {
-    const potion = button(this, 1045, 595, 175, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
+    const ether = button(this, 1045, 540, 175, 42, `Ефір ×${state.ether}`, () => this.useEther(), CYAN);
+    ether.box.setDepth(40); ether.label.setDepth(41);
+    this.etherText = ether.label;
+
+    const potion = button(this, 1045, 592, 175, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
     potion.box.setDepth(40); potion.label.setDepth(41);
-    const auto = button(this, 1045, 648, 175, 42, 'Автобій: ВИМК', () => {
+    this.potionText = potion.label;
+
+    const auto = button(this, 1045, 644, 175, 42, 'Автобій: ВИМК', () => {
       this.auto = !this.auto;
       this.autoText.setText(this.auto ? 'Автобій: УВІМК' : 'Автобій: ВИМК');
       this.log(this.auto ? 'Автобій увімкнено.' : 'Автобій вимкнено.');
@@ -751,6 +816,7 @@ class BattleScene extends Phaser.Scene {
 
     this.time.delayedCall(280, () => {
       let damage = Phaser.Math.Between(46, 72) + state.bossWins * 3;
+      damage = Math.max(8, damage - Math.max(0, state.armorLevel - 1) * 6);
       if (this.guarded) {
         damage = Math.floor(damage * 0.35);
         this.guarded = false;
@@ -798,8 +864,25 @@ class BattleScene extends Phaser.Scene {
     const heal = 170;
     this.heroHp = Math.min(state.maxHp, this.heroHp + heal);
     saveState(state);
+    this.potionText?.setText(`Зілля ×${state.potions}`);
     this.healEffect(heal);
     this.log(`Зілля відновило ${heal} здоров’я.`);
+    this.refreshBars();
+  }
+
+  private useEther() {
+    if (this.busy || state.ether <= 0 || this.heroHp <= 0) return;
+    if (this.heroMana >= state.maxMana) {
+      this.log('Мана вже заповнена.');
+      return;
+    }
+    state.ether -= 1;
+    const restored = Math.min(90, state.maxMana - this.heroMana);
+    this.heroMana += restored;
+    saveState(state);
+    this.etherText?.setText(`Ефір ×${state.ether}`);
+    this.floatNumber(340, 345, `+${restored} мана`, '#75d8ff');
+    this.log(`Ефір відновив ${restored} мани.`);
     this.refreshBars();
   }
 
