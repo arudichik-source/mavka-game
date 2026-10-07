@@ -48,6 +48,8 @@ jobs:
             fi
             sleep 1
           done
+          curl -fsS http://127.0.0.1:4173/manifest.webmanifest | grep -q "Мавка"
+          curl -fsS http://127.0.0.1:4173/sw.js | grep -q "mavka-v06"
           export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           npm run test:runtime
 

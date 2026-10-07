@@ -1,0 +1,19 @@
+{
+  "name": "Мавка: Легенди Пущі",
+  "short_name": "Мавка",
+  "description": "2D RPG про Берегиню Пущі",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#020806",
+  "theme_color": "#081812",
+  "icons": [
+    {
+      "src": "./mavka-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
