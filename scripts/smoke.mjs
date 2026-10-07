@@ -29,7 +29,21 @@ const page = await context.newPage();
 const runtimeErrors = [];
 page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
 page.on('console', (message) => {
-  if (message.type() === 'error') runtimeErrors.push(`console: ${message.text()}`);
+  if (message.type() === 'error' && !message.text().includes('Failed to load resource')) {
+    runtimeErrors.push(`console: ${message.text()}`);
+  }
+});
+page.on('response', (response) => {
+  const url = response.url();
+  if (response.status() >= 400 && !url.endsWith('/favicon.ico')) {
+    runtimeErrors.push(`http ${response.status()}: ${url}`);
+  }
+});
+page.on('requestfailed', (request) => {
+  const url = request.url();
+  if (!url.endsWith('/favicon.ico')) {
+    runtimeErrors.push(`requestfailed: ${url} ${request.failure()?.errorText ?? ''}`);
+  }
 });
 
 await page.goto('http://127.0.0.1:4173/', {
