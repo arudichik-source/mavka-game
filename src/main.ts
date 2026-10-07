@@ -307,10 +307,10 @@ class RegionScene extends Phaser.Scene {
   }
 
   private openSettlement() {
-    const c = this.baseModal('Поселення Мавки', 'Безпечне місце для відпочинку й підготовки');
-    const status = uiText(this, W / 2, 330, `Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`, 17, '#d9d1ba', 0.5);
+    const c = this.baseModal('Поселення Мавки', 'Безпечне місце для відпочинку, підготовки й розмов', 680, 500);
+    const status = uiText(this, W / 2, 315, `Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`, 17, '#d9d1ba', 0.5);
     c.add(status);
-    this.addModalButton(c, 510, 420, 'Відпочити • 120 ◉', () => {
+    this.addModalButton(c, 505, 390, 'Відпочити • 120 ◉', () => {
       if (state.coins < 120) return this.toast('Недостатньо монет.');
       state.coins -= 120;
       state.hp = state.maxHp;
@@ -320,7 +320,7 @@ class RegionScene extends Phaser.Scene {
       status.setText(`Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`);
       this.toast('Мавка відпочила та відновила сили.');
     }, 0x64bd85);
-    this.addModalButton(c, 770, 420, 'Купити зілля • 90 ◉', () => {
+    this.addModalButton(c, 770, 390, 'Купити зілля • 90 ◉', () => {
       if (state.coins < 90) return this.toast('Недостатньо монет.');
       state.coins -= 90;
       state.potions += 1;
@@ -329,6 +329,37 @@ class RegionScene extends Phaser.Scene {
       status.setText(`Здоров’я: ${state.hp}/${state.maxHp}   •   Зілля: ${state.potions}`);
       this.toast('Зілля додано до рюкзака.');
     });
+    this.addModalButton(c, W / 2, 470, state.storyFlags.includes('kruk_intro') ? 'Крук • поговорити знову' : 'Поговорити з Круком', () => {
+      this.openKrukDialogue();
+    }, 0x7893a5);
+  }
+
+  private openKrukDialogue() {
+    const firstTime = !state.storyFlags.includes('kruk_intro');
+    const c = this.baseModal('Крук', 'Розвідник Пущі • бачить те, що губиться в тумані', 700, 460);
+    const body = uiText(
+      this,
+      W / 2,
+      335,
+      firstTime
+        ? '«Мавко, туман із боліт повзе до Старого Млина. Я бачив сліди, що не належать ані людині, ані звіру. Спершу розпитай мельника, а потім не йди до Хранителя непідготовленою.»'
+        : '«Сліди ведуть до боліт. Посох допоможе бити сильніше, броня стримає удар, а Вовк — доб’є того, хто намагатиметься втекти.»',
+      17,
+      '#e2d8c2',
+      0.5
+    ).setWordWrapWidth(560).setAlign('center').setLineSpacing(7);
+    c.add(body);
+    this.addModalButton(c, W / 2, 455, firstTime ? 'Я зрозуміла' : 'Дякую, Круче', () => {
+      if (firstTime) {
+        state.storyFlags.push('kruk_intro');
+        state.crystals += 1;
+        gainXp(state, 60);
+        saveState(state);
+        this.refreshHud();
+        this.toast('Крук передав 1 кристал • +60 XP.');
+      }
+      this.closeModal();
+    }, 0x7893a5);
   }
 
   private openOak() {
@@ -410,19 +441,18 @@ class RegionScene extends Phaser.Scene {
   }
 
   private openMill() {
-    const c = this.baseModal('Старий Млин', 'Мельник торгує припасами й знає місцеві чутки', 690, 450);
-    const info = uiText(this, W / 2, 310, `Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`, 16, '#d9d1ba', 0.5);
+    const c = this.baseModal('Старий Млин', 'Мельник торгує припасами й знає місцеві чутки', 720, 500);
+    const info = uiText(this, W / 2, 295, `Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`, 16, '#d9d1ba', 0.5);
     c.add(info);
-    this.addModalButton(c, 505, 410, 'Зілля • 90 ◉', () => {
+    this.addModalButton(c, 505, 380, 'Зілля • 90 ◉', () => {
       if (state.coins < 90) return this.toast('Недостатньо монет.');
       state.coins -= 90;
       state.potions += 1;
-      state.quests.mill = 1;
       saveState(state);
       this.refreshHud();
       info.setText(`Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`);
     });
-    this.addModalButton(c, 775, 410, 'Ефір • 2 ◆', () => {
+    this.addModalButton(c, 775, 380, 'Ефір • 2 ◆', () => {
       if (state.crystals < 2) return this.toast('Недостатньо кристалів.');
       state.crystals -= 2;
       state.ether += 1;
@@ -430,6 +460,38 @@ class RegionScene extends Phaser.Scene {
       this.refreshHud();
       info.setText(`Монети: ${state.coins.toLocaleString('uk-UA')}   •   Зілля: ${state.potions}   •   Ефір: ${state.ether}`);
     }, CYAN);
+    this.addModalButton(c, W / 2, 465, state.storyFlags.includes('miller_secret') ? 'Мельник • пригадати розмову' : 'Розпитати мельника', () => {
+      this.openMillerDialogue();
+    }, 0xc09454);
+  }
+
+  private openMillerDialogue() {
+    const firstTime = !state.storyFlags.includes('miller_secret');
+    const c = this.baseModal('Мельник', 'Старий Млин • нічні чутки', 720, 490);
+    const body = uiText(
+      this,
+      W / 2,
+      335,
+      firstTime
+        ? '«Щоночі колесо крутиться саме, навіть коли річка тиха. А з боку боліт чути важкі кроки. Учора Крук приніс чорну гілку — вона була мокра, але пахла димом. Якщо підеш туди, шукай Хранителя. Він тримає скверну біля кореня.»'
+        : '«Я вже сказав усе, що знаю: чорна гілка, важкі кроки й Хранитель. Поверни Пущі чисту воду — тоді й млин знову спатиме вночі.»',
+      17,
+      '#e4dac5',
+      0.5
+    ).setWordWrapWidth(570).setAlign('center').setLineSpacing(7);
+    c.add(body);
+    this.addModalButton(c, W / 2, 465, firstTime ? 'Я знайду Хранителя' : 'Повернутися', () => {
+      if (firstTime) {
+        state.storyFlags.push('miller_secret');
+        state.quests.mill = 1;
+        state.herbs += 8;
+        gainXp(state, 90);
+        saveState(state);
+        this.refreshHud();
+        this.toast('Таємницю Млина розкрито • +8 трав • +90 XP.');
+      }
+      this.closeModal();
+    }, 0xc09454);
   }
 
   private openSwamp() {
