@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:runtime": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "phaser": "4.2.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",
-    "vite": "8.3.3"
+    "vite": "8.3.3",
+    "playwright-core": "1.55.0"
   }
 }
