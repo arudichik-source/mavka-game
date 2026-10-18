@@ -84,6 +84,24 @@ await page.waitForTimeout(180);
 await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
 
+// The quest rail is collapsed by default so it does not cover the world.
+await page.mouse.click(1238, 220);
+await page.waitForTimeout(280);
+await page.screenshot({ path: 'visual-qa/region-quests-open.png', fullPage: true });
+await page.mouse.click(1018, 220);
+await page.waitForTimeout(240);
+
+// Verify the visible bottom navigation opens the Chronicle.
+await page.mouse.click(890, 681);
+await page.waitForFunction(() => {
+  const game = window.__MAVKA_GAME__;
+  const region = game?.scene?.getScene('region');
+  return Boolean(region?.modal?.active);
+}, null, { timeout: 5_000 });
+await page.screenshot({ path: 'visual-qa/chronicle.png', fullPage: true });
+await page.mouse.click(90, 105);
+await page.waitForTimeout(180);
+
 await page.mouse.move(397, 164);
 await page.waitForTimeout(180);
 await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
