@@ -255,16 +255,20 @@ type Landmark = {
   labelY: number;
   labelW: number;
   labelH: number;
+  worldX: number;
+  worldY: number;
+  worldW: number;
+  worldH: number;
 };
 
 const LANDMARKS: Landmark[] = [
-  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48 },
-  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46 },
-  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46 },
-  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48 },
-  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46 },
-  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46 },
-  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50 }
+  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48, worldX: 230, worldY: 355, worldW: 290, worldH: 190 },
+  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46, worldX: 535, worldY: 245, worldW: 255, worldH: 275 },
+  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46, worldX: 795, worldY: 185, worldW: 210, worldH: 165 },
+  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48, worldX: 325, worldY: 500, worldW: 300, worldH: 145 },
+  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46, worldX: 655, worldY: 515, worldW: 250, worldH: 140 },
+  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46, worldX: 890, worldY: 365, worldW: 220, worldH: 180 },
+  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50, worldX: 980, worldY: 555, worldW: 190, worldH: 175 }
 ];
 
 class RegionScene extends Phaser.Scene {
@@ -420,6 +424,15 @@ class RegionScene extends Phaser.Scene {
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
 
+      const worldHit = this.add.ellipse(
+        spot.worldX,
+        spot.worldY,
+        spot.worldW,
+        spot.worldH,
+        0xffffff,
+        0.001
+      ).setInteractive({ useHandCursor: true }).setDepth(6);
+
       let hoverDepth = 0;
       const showHover = () => {
         hoverDepth += 1;
@@ -450,7 +463,7 @@ class RegionScene extends Phaser.Scene {
         this.time.delayedCall(90, () => this.openLandmark(spot));
       };
 
-      [markerHit, labelHit].forEach((hit) => {
+      [markerHit, labelHit, worldHit].forEach((hit) => {
         hit.on('pointerover', showHover);
         hit.on('pointerout', hideHover);
         hit.on('pointerdown', activate);
