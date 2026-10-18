@@ -1,4 +1,4 @@
-const CACHE = 'mavka-v06';
+const CACHE = 'mavka-v061';
 const CORE = ['./', './manifest.webmanifest', './mavka-icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -17,6 +17,21 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put('./', copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match('./'))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

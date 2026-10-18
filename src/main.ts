@@ -143,11 +143,39 @@ class BootScene extends Phaser.Scene {
     const source = this.textures.get('visual-atlas').getSourceImage() as HTMLImageElement;
     const makeFrame = (key: string, sy: number) => {
       const canvas = document.createElement('canvas');
-      canvas.width = FRAME_WIDTH;
-      canvas.height = FRAME_HEIGHT;
-      const ctx = canvas.getContext('2d');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) throw new Error('Canvas 2D unavailable');
-      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
+      // The source atlas is intentionally compact for fast delivery. Upscale once
+      // with high-quality filtering and a light unsharp pass, then render 1:1.
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.filter = 'contrast(1.06) saturate(1.05)';
+      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, W, H);
+      ctx.filter = 'none';
+
+      const image = ctx.getImageData(0, 0, W, H);
+      const src = image.data;
+      const sharpened = new Uint8ClampedArray(src);
+      const strength = 0.18;
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const i = (y * W + x) * 4;
+          const left = i - 4;
+          const right = i + 4;
+          const up = i - W * 4;
+          const down = i + W * 4;
+          for (let channel = 0; channel < 3; channel++) {
+            const neighborAvg = (src[left + channel] + src[right + channel] + src[up + channel] + src[down + channel]) / 4;
+            const value = src[i + channel] * (1 + strength) - neighborAvg * strength;
+            sharpened[i + channel] = Phaser.Math.Clamp(Math.round(value), 0, 255);
+          }
+        }
+      }
+      image.data.set(sharpened);
+      ctx.putImageData(image, 0, 0);
       this.textures.addCanvas(key, canvas);
     };
     makeFrame('region-bg', 0);
@@ -220,20 +248,23 @@ type Landmark = {
   id: string;
   name: string;
   subtitle: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  markerX: number;
+  markerY: number;
+  markerSize: number;
+  labelX: number;
+  labelY: number;
+  labelW: number;
+  labelH: number;
 };
 
 const LANDMARKS: Landmark[] = [
-  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', x: 330, y: 302, w: 250, h: 120 },
-  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', x: 610, y: 205, w: 170, h: 100 },
-  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', x: 885, y: 190, w: 185, h: 100 },
-  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', x: 820, y: 320, w: 240, h: 110 },
-  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', x: 300, y: 505, w: 180, h: 90 },
-  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', x: 670, y: 445, w: 235, h: 120 },
-  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', x: 1010, y: 505, w: 300, h: 125 }
+  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48 },
+  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46 },
+  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46 },
+  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48 },
+  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46 },
+  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46 },
+  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50 }
 ];
 
 class RegionScene extends Phaser.Scene {
@@ -254,6 +285,7 @@ class RegionScene extends Phaser.Scene {
     this.resourceText = uiText(this, W - 24, 28, '', 16, '#f4dda1', 1).setDepth(11);
     this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(30).setAlpha(0);
 
+    this.addRegionAtmosphere();
     this.makeLandmarks();
     this.makeNav();
     this.refreshHud();
@@ -271,24 +303,97 @@ class RegionScene extends Phaser.Scene {
     this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
   }
 
+  private addRegionAtmosphere() {
+    for (let i = 0; i < 14; i++) {
+      const x = Phaser.Math.Between(140, 1000);
+      const y = Phaser.Math.Between(135, 585);
+      const mote = this.add.circle(x, y, Phaser.Math.Between(1, 2), i % 4 === 0 ? 0xffd77a : 0xa0e3ad, 0.18)
+        .setDepth(2);
+      this.tweens.add({
+        targets: mote,
+        x: x + Phaser.Math.Between(-16, 16),
+        y: y - Phaser.Math.Between(10, 32),
+        alpha: { from: 0.08, to: 0.42 },
+        duration: Phaser.Math.Between(2200, 5200),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    }
+  }
+
   private makeLandmarks() {
     LANDMARKS.forEach((spot) => {
-      const hit = this.add.rectangle(spot.x, spot.y, spot.w, spot.h, 0x68d29a, 0.001)
-        .setStrokeStyle(2, 0xf1d58c, 0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(5);
-      const label = uiText(this, spot.x, spot.y - spot.h / 2 - 12, spot.name, 16, '#ffe7a8', 0.5)
-        .setDepth(6)
-        .setAlpha(0);
-      hit.on('pointerover', () => {
-        hit.setFillStyle(0x77d7a0, 0.08).setStrokeStyle(2, 0xf1d58c, 0.85);
-        label.setAlpha(1);
+      const glow = this.add.circle(
+        spot.markerX,
+        spot.markerY,
+        spot.markerSize * 0.62,
+        spot.id === 'swamp' ? 0x63d991 : 0xf0cf78,
+        0
+      ).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0)
+        .setDepth(7);
+
+      const tooltipBg = this.add.rectangle(
+        spot.markerX,
+        spot.markerY - spot.markerSize * 0.95,
+        Math.min(300, Math.max(170, spot.name.length * 10 + 40)),
+        48,
+        0x06100c,
+        0.94
+      ).setStrokeStyle(1, GOLD, 0.75).setDepth(31).setAlpha(0);
+      const tooltip = uiText(
+        this,
+        spot.markerX,
+        spot.markerY - spot.markerSize * 0.95,
+        `${spot.name} • ${spot.subtitle}`,
+        13,
+        '#f7e7bb',
+        0.5
+      ).setDepth(32).setAlpha(0);
+
+      const markerHit = this.add.rectangle(
+        spot.markerX,
+        spot.markerY,
+        spot.markerSize,
+        spot.markerSize,
+        0xffffff,
+        0.001
+      ).setInteractive({ useHandCursor: true }).setDepth(8);
+
+      const labelHit = this.add.rectangle(
+        spot.labelX,
+        spot.labelY,
+        spot.labelW,
+        spot.labelH,
+        0xffffff,
+        0.001
+      ).setInteractive({ useHandCursor: true }).setDepth(8);
+
+      let hoverDepth = 0;
+      const showHover = () => {
+        hoverDepth += 1;
+        glow.setAlpha(0.18).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0.95);
+        tooltipBg.setAlpha(1);
+        tooltip.setAlpha(1);
+        this.tweens.killTweensOf(glow);
+        this.tweens.add({ targets: glow, scale: 1.18, duration: 220, ease: 'Sine.out' });
+      };
+      const hideHover = () => {
+        hoverDepth = Math.max(0, hoverDepth - 1);
+        this.time.delayedCall(25, () => {
+          if (hoverDepth !== 0) return;
+          glow.setAlpha(0).setStrokeStyle(3, 0xffffff, 0).setScale(1);
+          tooltipBg.setAlpha(0);
+          tooltip.setAlpha(0);
+        });
+      };
+      const activate = () => this.openLandmark(spot);
+
+      [markerHit, labelHit].forEach((hit) => {
+        hit.on('pointerover', showHover);
+        hit.on('pointerout', hideHover);
+        hit.on('pointerdown', activate);
       });
-      hit.on('pointerout', () => {
-        hit.setFillStyle(0x68d29a, 0.001).setStrokeStyle(2, 0xf1d58c, 0);
-        label.setAlpha(0);
-      });
-      hit.on('pointerdown', () => this.openLandmark(spot));
     });
   }
 
