@@ -284,22 +284,23 @@ class RegionScene extends Phaser.Scene {
   create() {
     background(this, 'region-bg');
 
-    // The illustration contains concept HUD artwork. Cover its baked counters and
-    // render the real game state on top so the player never sees two sets of values.
-    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.98)
-      .setStrokeStyle(1, GOLD, 0.34)
+    // Keep the concept art visible. Only a slim translucent status strip is drawn
+    // over the baked top counters instead of replacing the whole composition.
+    this.add.rectangle(W / 2, 25, W, 50, 0x020806, 0.78)
+      .setStrokeStyle(1, GOLD, 0.24)
       .setDepth(10);
-    gameText(this, W / 2, 28, 'СЕРЦЕ ПУЩІ', 20, '#ead18f', 0.5).setDepth(11);
+    gameText(this, W / 2, 25, 'СЕРЦЕ ПУЩІ', 18, '#ead18f', 0.5).setDepth(11);
 
-    this.profileText = uiText(this, 22, 29, '', 15, '#f5e8c5').setDepth(11);
-    this.resourceText = uiText(this, W - 22, 29, '', 15, '#f4dda1', 1).setDepth(11);
-    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
+    this.profileText = uiText(this, 20, 25, '', 14, '#f5e8c5').setDepth(11);
+    this.resourceText = uiText(this, W - 20, 25, '', 14, '#f4dda1', 1).setDepth(11);
+    this.toastText = uiText(this, W / 2, 72, '', 15, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
     this.drawQuestRail();
     this.makeLandmarks();
     this.makeNav();
     this.refreshHud();
+    this.input.keyboard?.on('keydown-ESC', () => this.closeModal());
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
     if (!state.seenIntro) {
@@ -315,46 +316,44 @@ class RegionScene extends Phaser.Scene {
   }
 
   private drawQuestRail() {
-    const x = 1158;
-    const y = 330;
-    const w = 236;
-    const h = 500;
-    this.add.rectangle(x + 4, y + 5, w, h, 0x000000, 0.38).setDepth(11);
-    this.add.rectangle(x, y, w, h, PANEL, 0.98)
-      .setStrokeStyle(2, GOLD, 0.65)
+    const x = 1162;
+    const y = 252;
+    const w = 206;
+    const h = 286;
+    const panel = this.add.rectangle(x, y, w, h, PANEL, 0.82)
+      .setStrokeStyle(1, GOLD, 0.48)
       .setDepth(12);
+    const title = uiText(this, x - 84, 132, 'Завдання', 15, '#f0d18a').setDepth(13);
 
-    uiText(this, x - 94, 118, 'Завдання регіону', 17, '#f0d18a').setDepth(13);
     const rows: Array<{ id: QuestId; title: string; target: number }> = [
-      { id: 'oak', title: 'Голос Старого Дуба', target: 3 },
-      { id: 'hunter', title: 'Стежками мисливця', target: 4 },
-      { id: 'mill', title: 'Таємниця Старого Млина', target: 1 }
+      { id: 'oak', title: 'Старий Дуб', target: 3 },
+      { id: 'hunter', title: 'Мисливець', target: 4 },
+      { id: 'mill', title: 'Старий Млин', target: 1 }
     ];
+
     rows.forEach((q, i) => {
-      const yy = 165 + i * 86;
+      const yy = 176 + i * 62;
       const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
       const done = state.claimedQuests.includes(q.id);
-      this.add.rectangle(x, yy, 204, 72, done ? 0x123522 : 0x0d1915, 0.9)
-        .setStrokeStyle(1, done ? 0x6fc78c : 0x806b3a, 0.58)
-        .setDepth(13);
-      uiText(this, x - 88, yy - 18, q.title, 14, done ? '#9ee3ad' : '#ead497').setDepth(14);
-      uiText(this, x - 88, yy + 10, done ? 'Виконано' : `${current}/${q.target}`, 13, done ? '#8fe0a5' : '#c9bea3').setDepth(14);
-      if (!done) {
-        const ratio = q.target ? current / q.target : 0;
-        this.add.rectangle(x - 88, yy + 27, 174, 5, 0x263029, 1).setOrigin(0, 0.5).setDepth(14);
-        this.add.rectangle(x - 88, yy + 27, 174 * ratio, 5, 0x62c98a, 1).setOrigin(0, 0.5).setDepth(15);
-      }
+      uiText(this, x - 82, yy - 10, q.title, 13, done ? '#8edaa2' : '#ddd0ad').setDepth(13);
+      uiText(this, x + 82, yy - 10, done ? '✓' : `${current}/${q.target}`, 12, done ? '#8edaa2' : '#c7b986', 1).setDepth(13);
+      const base = this.add.rectangle(x - 82, yy + 14, 164, 4, 0x253029, 0.95).setOrigin(0, 0.5).setDepth(13);
+      const ratio = done ? 1 : current / q.target;
+      const fill = this.add.rectangle(x - 82, yy + 14, 164 * ratio, 4, done ? 0x68bd83 : 0xa98c4e, 0.95).setOrigin(0, 0.5).setDepth(14);
+      void base; void fill;
     });
 
-    const open = this.add.rectangle(x, 518, 204, 44, 0x10231b, 0.97)
-      .setStrokeStyle(1, GOLD, 0.72)
+    const journal = this.add.rectangle(x, 344, 166, 34, 0x0d1b15, 0.92)
+      .setStrokeStyle(1, GOLD, 0.55)
       .setInteractive({ useHandCursor: true })
       .setDepth(13);
-    const label = uiText(this, x, 518, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
-    open.on('pointerover', () => open.setFillStyle(GREEN, 0.18));
-    open.on('pointerout', () => open.setFillStyle(0x10231b, 0.94));
-    open.on('pointerdown', () => this.openQuests());
-    label.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openQuests());
+    const journalText = uiText(this, x, 344, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
+    const open = () => this.openQuests();
+    journal.on('pointerover', () => journal.setFillStyle(0x1b3427, 0.96));
+    journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.92));
+    journal.on('pointerdown', open);
+    journalText.setInteractive({ useHandCursor: true }).on('pointerdown', open);
+    void panel; void title;
   }
 
   private addRegionAtmosphere() {
@@ -565,7 +564,8 @@ class RegionScene extends Phaser.Scene {
   private baseModal(title: string, subtitle: string, width = 640, height = 430) {
     this.closeModal();
     const c = this.add.container(0, 0).setDepth(80);
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setInteractive();
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.58).setInteractive();
+    shade.on('pointerdown', () => this.closeModal());
     const parts = ornatePanel(this, W / 2, H / 2, width, height);
     const heading = gameText(this, W / 2, H / 2 - height / 2 + 48, title, 28, GOLD_LIGHT, 0.5);
     const sub = uiText(this, W / 2, H / 2 - height / 2 + 82, subtitle, 15, '#bfcbbb', 0.5);
@@ -573,6 +573,8 @@ class RegionScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     x.on('pointerdown', () => this.closeModal());
     c.add([shade, ...parts, heading, sub, x]);
+    c.setAlpha(0).setScale(0.98);
+    this.tweens.add({ targets: c, alpha: 1, scale: 1, duration: 150, ease: 'Cubic.out' });
     this.modal = c;
     return c;
   }
@@ -956,8 +958,17 @@ class RegionScene extends Phaser.Scene {
   }
 
   private closeModal() {
-    this.modal?.destroy(true);
+    if (!this.modal) return;
+    const modal = this.modal;
     this.modal = undefined;
+    this.tweens.add({
+      targets: modal,
+      alpha: 0,
+      scale: 0.985,
+      duration: 100,
+      ease: 'Cubic.in',
+      onComplete: () => modal.destroy(true)
+    });
   }
 }
 
