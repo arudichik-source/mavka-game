@@ -358,16 +358,73 @@ class RegionScene extends Phaser.Scene {
   }
 
   private addRegionAtmosphere() {
-    for (let i = 0; i < 14; i++) {
-      const x = Phaser.Math.Between(140, 1000);
-      const y = Phaser.Math.Between(135, 585);
-      const mote = this.add.circle(x, y, Phaser.Math.Between(1, 2), i % 4 === 0 ? 0xffd77a : 0xa0e3ad, 0.18)
+    const pulse = (x: number, y: number, radius: number, color: number, minAlpha: number, maxAlpha: number, duration: number) => {
+      const glow = this.add.circle(x, y, radius, color, minAlpha)
+        .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(2);
       this.tweens.add({
+        targets: glow,
+        alpha: { from: minAlpha, to: maxAlpha },
+        scale: { from: 0.92, to: 1.12 },
+        duration,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    };
+
+    pulse(530, 150, 54, 0xf5ca67, 0.018, 0.07, 2200);
+    pulse(760, 195, 46, 0x79e6c0, 0.018, 0.08, 1800);
+    pulse(885, 352, 38, 0xffb95a, 0.014, 0.06, 1300);
+    pulse(985, 548, 70, 0x53d5bd, 0.018, 0.08, 2600);
+
+    // Water shimmer over the main falls.
+    [
+      { x: 545, y: 348, w: 18, h: 95, delay: 0 },
+      { x: 655, y: 405, w: 16, h: 86, delay: 450 },
+      { x: 770, y: 438, w: 14, h: 72, delay: 820 }
+    ].forEach(({ x, y, w, h, delay }) => {
+      const shimmer = this.add.ellipse(x, y, w, h, 0xc7ffff, 0.025)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(2);
+      this.tweens.add({
+        targets: shimmer,
+        alpha: { from: 0.015, to: 0.09 },
+        y: y + 10,
+        duration: 1500,
+        delay,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    });
+
+    // Slow swamp mist gives the lower-right zone a living silhouette.
+    for (let i = 0; i < 5; i++) {
+      const mist = this.add.ellipse(900 + i * 42, 548 + (i % 2) * 22, 130, 28, 0x7fd6c0, 0.025)
+        .setDepth(2);
+      this.tweens.add({
+        targets: mist,
+        x: mist.x + Phaser.Math.Between(28, 54),
+        alpha: { from: 0.015, to: 0.065 },
+        duration: 4200 + i * 500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    }
+
+    for (let i = 0; i < 22; i++) {
+      const x = Phaser.Math.Between(120, 1010);
+      const y = Phaser.Math.Between(120, 590);
+      const mote = this.add.circle(x, y, Phaser.Math.Between(1, 2), i % 4 === 0 ? 0xffd77a : 0xa0e3ad, 0.16)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(3);
+      this.tweens.add({
         targets: mote,
-        x: x + Phaser.Math.Between(-16, 16),
-        y: y - Phaser.Math.Between(10, 32),
-        alpha: { from: 0.08, to: 0.42 },
+        x: x + Phaser.Math.Between(-18, 18),
+        y: y - Phaser.Math.Between(12, 38),
+        alpha: { from: 0.06, to: 0.46 },
         duration: Phaser.Math.Between(2200, 5200),
         yoyo: true,
         repeat: -1,
@@ -1019,6 +1076,7 @@ class BattleScene extends Phaser.Scene {
 
   create() {
     background(this, 'battle-bg');
+    this.drawBattleAtmosphere();
     this.heroHp = Math.max(1, state.hp);
     this.heroMana = Math.max(0, state.mana);
     const scaling = this.encounter.boss
@@ -1055,6 +1113,52 @@ class BattleScene extends Phaser.Scene {
         if (available.length) this.useSkill(Phaser.Utils.Array.GetRandom(available));
       }
     });
+  }
+
+  private drawBattleAtmosphere() {
+    const enemyAura = this.add.circle(835, 325, 95, 0x72e55e, 0.018)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(1);
+    this.tweens.add({
+      targets: enemyAura,
+      scale: { from: 0.9, to: 1.14 },
+      alpha: { from: 0.012, to: 0.075 },
+      duration: 1450,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut'
+    });
+
+    const heroAura = this.add.ellipse(345, 398, 185, 72, 0xa1f0b2, 0.018)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(1);
+    this.tweens.add({
+      targets: heroAura,
+      alpha: { from: 0.01, to: 0.06 },
+      scaleX: { from: 0.9, to: 1.08 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut'
+    });
+
+    for (let i = 0; i < 12; i++) {
+      const x = Phaser.Math.Between(250, 930);
+      const y = Phaser.Math.Between(220, 520);
+      const wisp = this.add.circle(x, y, Phaser.Math.Between(1, 3), i % 3 === 0 ? 0x87f1b1 : 0xb9e7dc, 0.1)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(2);
+      this.tweens.add({
+        targets: wisp,
+        x: x + Phaser.Math.Between(-30, 45),
+        y: y - Phaser.Math.Between(20, 55),
+        alpha: { from: 0.035, to: 0.34 },
+        duration: Phaser.Math.Between(1700, 3600),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    }
   }
 
   private drawBattleChrome() {
