@@ -84,13 +84,8 @@ await page.waitForTimeout(180);
 await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
 
-// The quest rail is collapsed by default so it does not cover the world.
-await page.mouse.move(489, 129);
-await page.waitForTimeout(180);
-await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
-
-// Capture hover feedback on a real painted landmark.
-await page.mouse.move(489, 129);
+// Capture hover feedback on the real Old Oak marker without drawing extra cards.
+await page.mouse.move(397, 164);
 await page.waitForTimeout(180);
 await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
 
