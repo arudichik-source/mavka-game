@@ -255,16 +255,20 @@ type Landmark = {
   labelY: number;
   labelW: number;
   labelH: number;
+  worldX: number;
+  worldY: number;
+  worldW: number;
+  worldH: number;
 };
 
 const LANDMARKS: Landmark[] = [
-  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48 },
-  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46 },
-  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46 },
-  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48 },
-  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46 },
-  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46 },
-  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50 }
+  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48, worldX: 230, worldY: 355, worldW: 290, worldH: 190 },
+  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46, worldX: 535, worldY: 245, worldW: 255, worldH: 275 },
+  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46, worldX: 795, worldY: 185, worldW: 210, worldH: 165 },
+  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48, worldX: 325, worldY: 500, worldW: 300, worldH: 145 },
+  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46, worldX: 655, worldY: 515, worldW: 250, worldH: 140 },
+  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46, worldX: 890, worldY: 365, worldW: 220, worldH: 180 },
+  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50, worldX: 980, worldY: 555, worldW: 190, worldH: 175 }
 ];
 
 class RegionScene extends Phaser.Scene {
@@ -279,13 +283,20 @@ class RegionScene extends Phaser.Scene {
 
   create() {
     background(this, 'region-bg');
-    this.add.rectangle(W / 2, 29, W, 58, 0x04100c, 0.62).setDepth(10);
 
-    this.profileText = uiText(this, 24, 28, '', 16, '#f5e8c5').setDepth(11);
-    this.resourceText = uiText(this, W - 24, 28, '', 16, '#f4dda1', 1).setDepth(11);
-    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(30).setAlpha(0);
+    // The illustration contains concept HUD artwork. Cover its baked counters and
+    // render the real game state on top so the player never sees two sets of values.
+    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.98)
+      .setStrokeStyle(1, GOLD, 0.34)
+      .setDepth(10);
+    gameText(this, W / 2, 28, 'СЕРЦЕ ПУЩІ', 20, '#ead18f', 0.5).setDepth(11);
+
+    this.profileText = uiText(this, 22, 29, '', 15, '#f5e8c5').setDepth(11);
+    this.resourceText = uiText(this, W - 22, 29, '', 15, '#f4dda1', 1).setDepth(11);
+    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
+    this.drawQuestRail();
     this.makeLandmarks();
     this.makeNav();
     this.refreshHud();
@@ -301,6 +312,49 @@ class RegionScene extends Phaser.Scene {
   private refreshHud() {
     this.profileText.setText(`Мавка • рівень ${state.level}     ❤ ${state.hp}/${state.maxHp}     ✦ ${state.mana}/${state.maxMana}`);
     this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
+  }
+
+  private drawQuestRail() {
+    const x = 1158;
+    const y = 330;
+    const w = 236;
+    const h = 500;
+    this.add.rectangle(x + 4, y + 5, w, h, 0x000000, 0.38).setDepth(11);
+    this.add.rectangle(x, y, w, h, PANEL, 0.98)
+      .setStrokeStyle(2, GOLD, 0.65)
+      .setDepth(12);
+
+    uiText(this, x - 94, 118, 'Завдання регіону', 17, '#f0d18a').setDepth(13);
+    const rows: Array<{ id: QuestId; title: string; target: number }> = [
+      { id: 'oak', title: 'Голос Старого Дуба', target: 3 },
+      { id: 'hunter', title: 'Стежками мисливця', target: 4 },
+      { id: 'mill', title: 'Таємниця Старого Млина', target: 1 }
+    ];
+    rows.forEach((q, i) => {
+      const yy = 165 + i * 86;
+      const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
+      const done = state.claimedQuests.includes(q.id);
+      this.add.rectangle(x, yy, 204, 72, done ? 0x123522 : 0x0d1915, 0.9)
+        .setStrokeStyle(1, done ? 0x6fc78c : 0x806b3a, 0.58)
+        .setDepth(13);
+      uiText(this, x - 88, yy - 18, q.title, 14, done ? '#9ee3ad' : '#ead497').setDepth(14);
+      uiText(this, x - 88, yy + 10, done ? 'Виконано' : `${current}/${q.target}`, 13, done ? '#8fe0a5' : '#c9bea3').setDepth(14);
+      if (!done) {
+        const ratio = q.target ? current / q.target : 0;
+        this.add.rectangle(x - 88, yy + 27, 174, 5, 0x263029, 1).setOrigin(0, 0.5).setDepth(14);
+        this.add.rectangle(x - 88, yy + 27, 174 * ratio, 5, 0x62c98a, 1).setOrigin(0, 0.5).setDepth(15);
+      }
+    });
+
+    const open = this.add.rectangle(x, 518, 204, 44, 0x10231b, 0.97)
+      .setStrokeStyle(1, GOLD, 0.72)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(13);
+    const label = uiText(this, x, 518, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
+    open.on('pointerover', () => open.setFillStyle(GREEN, 0.18));
+    open.on('pointerout', () => open.setFillStyle(0x10231b, 0.94));
+    open.on('pointerdown', () => this.openQuests());
+    label.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openQuests());
   }
 
   private addRegionAtmosphere() {
@@ -333,29 +387,30 @@ class RegionScene extends Phaser.Scene {
       ).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0)
         .setDepth(7);
 
+      const tooltipX = Phaser.Math.Clamp(spot.markerX, 165, W - 165);
+      const tooltipY = Math.max(92, spot.markerY - spot.markerSize * 0.95);
       const tooltipBg = this.add.rectangle(
-        spot.markerX,
-        spot.markerY - spot.markerSize * 0.95,
-        Math.min(300, Math.max(170, spot.name.length * 10 + 40)),
+        tooltipX,
+        tooltipY,
+        Math.min(310, Math.max(180, spot.name.length * 10 + 55)),
         48,
         0x06100c,
-        0.94
+        0.96
       ).setStrokeStyle(1, GOLD, 0.75).setDepth(31).setAlpha(0);
       const tooltip = uiText(
         this,
-        spot.markerX,
-        spot.markerY - spot.markerSize * 0.95,
+        tooltipX,
+        tooltipY,
         `${spot.name} • ${spot.subtitle}`,
         13,
         '#f7e7bb',
         0.5
       ).setDepth(32).setAlpha(0);
 
-      const markerHit = this.add.rectangle(
+      const markerHit = this.add.circle(
         spot.markerX,
         spot.markerY,
-        spot.markerSize,
-        spot.markerSize,
+        spot.markerSize * 0.52,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
@@ -368,6 +423,17 @@ class RegionScene extends Phaser.Scene {
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
+
+      // Invisible, image-aligned hotspot over the illustrated landmark itself.
+      // It has no visible border; the only hover feedback is the painted marker glow.
+      const worldHit = this.add.rectangle(
+        spot.worldX,
+        spot.worldY,
+        spot.worldW,
+        spot.worldH,
+        0xffffff,
+        0.001
+      ).setInteractive({ useHandCursor: true }).setDepth(6);
 
       let hoverDepth = 0;
       const showHover = () => {
@@ -387,9 +453,19 @@ class RegionScene extends Phaser.Scene {
           tooltip.setAlpha(0);
         });
       };
-      const activate = () => this.openLandmark(spot);
+      const activate = () => {
+        glow.setAlpha(0.26).setScale(0.96);
+        this.tweens.add({
+          targets: glow,
+          scale: 1.28,
+          alpha: 0,
+          duration: 260,
+          ease: 'Cubic.out'
+        });
+        this.time.delayedCall(90, () => this.openLandmark(spot));
+      };
 
-      [markerHit, labelHit].forEach((hit) => {
+      [markerHit, labelHit, worldHit].forEach((hit) => {
         hit.on('pointerover', showHover);
         hit.on('pointerout', hideHover);
         hit.on('pointerdown', activate);
@@ -398,18 +474,18 @@ class RegionScene extends Phaser.Scene {
   }
 
   private makeNav() {
+    // Hit areas follow the four painted navigation buttons in the artwork.
     const items = [
-      { x: 120, label: 'Карта', action: () => this.closeModal() },
-      { x: 350, label: 'Завдання', action: () => this.openQuests() },
-      { x: 580, label: 'Рюкзак', action: () => this.openInventory() },
-      { x: 810, label: 'Літопис', action: () => this.openChronicle() },
-      { x: 1040, label: 'Табір', action: () => this.openCamp() }
+      { x: 190, w: 270, action: () => this.closeModal() },
+      { x: 500, w: 270, action: () => this.openQuests() },
+      { x: 820, w: 270, action: () => this.openInventory() },
+      { x: 1135, w: 240, action: () => this.openCamp() }
     ];
     items.forEach((item) => {
-      const hit = this.add.rectangle(item.x, 675, 200, 64, 0xf0d18c, 0.001)
+      const hit = this.add.rectangle(item.x, 675, item.w, 68, 0xf0d18c, 0.001)
         .setInteractive({ useHandCursor: true }).setDepth(20);
-      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.08));
-      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001));
+      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.07).setStrokeStyle(1, 0xf0d18c, 0.45));
+      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0));
       hit.on('pointerdown', item.action);
     });
   }
@@ -813,6 +889,7 @@ class RegionScene extends Phaser.Scene {
       this.toast('Прогрес збережено.');
     }, 0x65b883);
     this.addModalButton(c, 775, 435, 'Головне меню', () => this.scene.start('title'), 0xa77a49);
+    this.addModalButton(c, W / 2, 505, 'Літопис Пущі', () => this.openChronicle(), CYAN);
   }
 
   private toast(message: string) {
@@ -955,7 +1032,7 @@ class BattleScene extends Phaser.Scene {
     this.auto = false;
     this.cooldowns = [false, false, false, false, false];
 
-    this.add.rectangle(W / 2, 28, W, 56, 0x020806, 0.44).setDepth(20);
+    this.drawBattleChrome();
     this.drawBars();
     this.drawSkills();
     this.drawBattleControls();
@@ -980,46 +1057,87 @@ class BattleScene extends Phaser.Scene {
     });
   }
 
-  private drawBars() {
-    const heroX = 88;
-    this.add.rectangle(heroX, 33, 300, 18, 0x29100e, 0.92).setOrigin(0, 0.5).setDepth(30);
-    this.hpFill = this.add.rectangle(heroX, 33, 300, 18, RED, 1).setOrigin(0, 0.5).setDepth(31);
-    this.hpText = uiText(this, heroX + 150, 33, '', 13, '#fff6e8', 0.5).setDepth(32);
-    this.add.rectangle(heroX, 54, 300, 12, 0x0c2233, 0.92).setOrigin(0, 0.5).setDepth(30);
-    this.manaFill = this.add.rectangle(heroX, 54, 300, 12, 0x3b92d0, 1).setOrigin(0, 0.5).setDepth(31);
-    this.manaText = uiText(this, heroX + 150, 54, '', 11, '#eef8ff', 0.5).setDepth(32);
+  private drawBattleChrome() {
+    // The concept art contains presentation-only HUD mockups. Cover those baked
+    // elements and render one authoritative interactive HUD above the artwork.
+    this.add.rectangle(W / 2, 38, W, 76, 0x020806, 0.98)
+      .setStrokeStyle(1, GOLD, 0.32)
+      .setDepth(20);
+    this.add.rectangle(1138, 395, 284, 638, 0x020806, 0.97)
+      .setStrokeStyle(1, GOLD, 0.42)
+      .setDepth(20);
+    this.add.rectangle(560, 653, 930, 134, 0x020806, 0.96)
+      .setStrokeStyle(1, GOLD, 0.38)
+      .setDepth(20);
+    this.add.rectangle(175, 145, 330, 128, 0x020806, 0.93)
+      .setStrokeStyle(1, 0x7a8d76, 0.38)
+      .setDepth(20);
 
-    this.add.rectangle(560, 33, 430, 20, 0x28100e, 0.94).setOrigin(0, 0.5).setDepth(30);
-    this.enemyFill = this.add.rectangle(560, 33, 430, 20, 0xb63f35, 1).setOrigin(0, 0.5).setDepth(31);
-    this.enemyText = uiText(this, 775, 33, '', 13, '#fff3df', 0.5).setDepth(32);
+    uiText(this, 38, 112, `Вовк • рівень ${state.wolfLevel}`, 15, '#d9e1d8').setDepth(22);
+    uiText(this, 38, 142, 'Супутник атакує через «Поклик Вовка»', 12, '#9fb1a4').setDepth(22);
+
+    this.add.rectangle(715, 103, 500, 44, 0x020806, 0.84)
+      .setStrokeStyle(1, 0x6c7d69, 0.38)
+      .setDepth(20);
+    uiText(this, 715, 103, this.encounter.boss ? 'Коріння • отрута • темна скверна' : 'Туман • скверна • різкі атаки', 13, '#b9c9bc', 0.5).setDepth(22);
+
+    uiText(this, 1020, 105, 'БІЙ', 17, '#f0d18a').setDepth(22);
+    uiText(this, 1020, 132, this.encounter.subtitle, 12, '#b7c5ba').setDepth(22);
+  }
+
+  private drawBars() {
+    const heroX = 24;
+    uiText(this, heroX, 17, 'МАВКА', 12, '#e6d4a4').setDepth(32);
+    this.add.rectangle(heroX, 38, 350, 18, 0x29100e, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.hpFill = this.add.rectangle(heroX, 38, 350, 18, RED, 1).setOrigin(0, 0.5).setDepth(31);
+    this.hpText = uiText(this, heroX + 175, 38, '', 13, '#fff6e8', 0.5).setDepth(32);
+    this.add.rectangle(heroX, 61, 350, 11, 0x0c2233, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.manaFill = this.add.rectangle(heroX, 61, 350, 11, 0x3b92d0, 1).setOrigin(0, 0.5).setDepth(31);
+    this.manaText = uiText(this, heroX + 175, 61, '', 11, '#eef8ff', 0.5).setDepth(32);
+
+    const enemyX = 450;
+    uiText(this, enemyX, 17, this.encounter.name.toUpperCase(), 12, '#e6d4a4').setDepth(32);
+    this.add.rectangle(enemyX, 38, 500, 20, 0x28100e, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.enemyFill = this.add.rectangle(enemyX, 38, 500, 20, 0xb63f35, 1).setOrigin(0, 0.5).setDepth(31);
+    this.enemyText = uiText(this, enemyX + 250, 38, '', 13, '#fff3df', 0.5).setDepth(32);
   }
 
   private drawSkills() {
-    const xs = [248, 398, 548, 698, 848];
+    const xs = [160, 335, 510, 685, 860];
     xs.forEach((x, i) => {
-      const hit = this.add.rectangle(x, 645, 126, 110, SKILLS[i].color, 0.001)
-        .setStrokeStyle(2, SKILLS[i].color, 0)
+      const hit = this.add.rectangle(x, 650, 158, 104, 0x0d1713, 0.96)
+        .setStrokeStyle(2, SKILLS[i].color, 0.72)
         .setInteractive({ useHandCursor: true })
         .setDepth(35);
-      const cd = uiText(this, x, 645, '', 18, '#fff4d8', 0.5).setDepth(37);
-      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.11).setStrokeStyle(2, SKILLS[i].color, 0.9));
-      hit.on('pointerout', () => hit.setFillStyle(SKILLS[i].color, 0.001).setStrokeStyle(2, SKILLS[i].color, 0));
+      const number = uiText(this, x - 64, 612, `${i + 1}`, 12, '#e8d39c', 0.5).setDepth(36);
+      const name = uiText(this, x, 634, SKILLS[i].name, 14, '#f2e6c9', 0.5).setDepth(36);
+      const cost = uiText(this, x, 665, `${SKILLS[i].cost} мани`, 12, '#7ecff1', 0.5).setDepth(36);
+      const cd = uiText(this, x, 650, '', 22, '#fff4d8', 0.5).setDepth(38);
+      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.18).setStrokeStyle(2, SKILLS[i].color, 1));
+      hit.on('pointerout', () => hit.setFillStyle(0x0d1713, 0.96).setStrokeStyle(2, SKILLS[i].color, 0.72));
       hit.on('pointerdown', () => this.useSkill(i));
       this.skillOverlays.push(hit);
       this.skillCdTexts.push(cd);
+      void number; void name; void cost;
     });
   }
 
   private drawBattleControls() {
-    const ether = button(this, 1045, 540, 175, 42, `Ефір ×${state.ether}`, () => this.useEther(), CYAN);
+    uiText(this, 1015, 176, 'Журнал бою', 16, '#e9d08c').setDepth(41);
+    this.logText = uiText(this, 1015, 218, '', 14, '#e9dfc8')
+      .setWordWrapWidth(225).setLineSpacing(5).setDepth(42);
+
+    uiText(this, 1015, 390, 'Припаси', 16, '#e9d08c').setDepth(41);
+
+    const ether = button(this, 1138, 444, 220, 42, `Ефір ×${state.ether}`, () => this.useEther(), CYAN);
     ether.box.setDepth(40); ether.label.setDepth(41);
     this.etherText = ether.label;
 
-    const potion = button(this, 1045, 592, 175, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
+    const potion = button(this, 1138, 496, 220, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
     potion.box.setDepth(40); potion.label.setDepth(41);
     this.potionText = potion.label;
 
-    const auto = button(this, 1045, 644, 175, 42, 'Автобій: ВИМК', () => {
+    const auto = button(this, 1138, 548, 220, 42, 'Автобій: ВИМК', () => {
       this.auto = !this.auto;
       this.autoText.setText(this.auto ? 'Автобій: УВІМК' : 'Автобій: ВИМК');
       this.log(this.auto ? 'Автобій увімкнено.' : 'Автобій вимкнено.');
@@ -1027,16 +1145,13 @@ class BattleScene extends Phaser.Scene {
     auto.box.setDepth(40); auto.label.setDepth(41);
     this.autoText = auto.label;
 
-    const retreat = button(this, 1180, 86, 150, 38, 'Відступити', () => {
+    const retreat = button(this, 1138, 606, 220, 42, 'Відступити', () => {
       state.hp = Math.max(1, this.heroHp);
       state.mana = this.heroMana;
       saveState(state);
       this.scene.start('region');
     }, 0xa7784e);
     retreat.box.setDepth(40); retreat.label.setDepth(41);
-
-    this.logText = uiText(this, 1045, 445, '', 14, '#e9dfc8', 0.5)
-      .setWordWrapWidth(300).setAlign('center').setDepth(42);
   }
 
   private useSkill(index: number) {
@@ -1200,9 +1315,9 @@ class BattleScene extends Phaser.Scene {
     const hpRatio = Phaser.Math.Clamp(this.heroHp / state.maxHp, 0, 1);
     const manaRatio = Phaser.Math.Clamp(this.heroMana / state.maxMana, 0, 1);
     const enemyRatio = Phaser.Math.Clamp(this.enemyHp / this.enemyMax, 0, 1);
-    this.hpFill.displayWidth = 300 * hpRatio;
-    this.manaFill.displayWidth = 300 * manaRatio;
-    this.enemyFill.displayWidth = 430 * enemyRatio;
+    this.hpFill.displayWidth = 350 * hpRatio;
+    this.manaFill.displayWidth = 350 * manaRatio;
+    this.enemyFill.displayWidth = 500 * enemyRatio;
     this.hpText.setText(`Мавка  ${this.heroHp}/${state.maxHp}`);
     this.manaText.setText(`Мана ${this.heroMana}/${state.maxMana}`);
     this.enemyText.setText(`${this.encounter.name}  ${this.enemyHp}/${this.enemyMax}`);

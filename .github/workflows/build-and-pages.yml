@@ -49,9 +49,20 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:4173/manifest.webmanifest | grep -q "Мавка"
-          curl -fsS http://127.0.0.1:4173/sw.js | grep -q "mavka-v061"
+          curl -fsS http://127.0.0.1:4173/sw.js | grep -q "mavka-v062"
           export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           npm run test:runtime
+
+      - name: Upload visual QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-qa-${{ github.sha }}
+          path: |
+            visual-qa/
+            runtime-smoke.png
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload build artifact
         if: github.ref == 'refs/heads/main'
