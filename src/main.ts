@@ -296,9 +296,10 @@ class RegionScene extends Phaser.Scene {
   create() {
     // Use only the illustrated world portion of the concept frame. The baked
     // top HUD, right quest panel and bottom navigation are excluded completely.
-    this.add.image(W / 2, H / 2, 'region-bg')
+    this.add.image(0, 0, 'region-bg')
+      .setOrigin(0, 0)
       .setCrop(REGION_CROP.x, REGION_CROP.y, REGION_CROP.w, REGION_CROP.h)
-      .setDisplaySize(W, H)
+      .setScale(W / REGION_CROP.w, H / REGION_CROP.h)
       .setDepth(-20);
 
     this.drawTopHud();
