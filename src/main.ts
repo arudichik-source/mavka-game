@@ -282,7 +282,7 @@ class RegionScene extends Phaser.Scene {
 
     // The illustration contains concept HUD artwork. Cover its baked counters and
     // render the real game state on top so the player never sees two sets of values.
-    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.9)
+    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.98)
       .setStrokeStyle(1, GOLD, 0.34)
       .setDepth(10);
     gameText(this, W / 2, 28, 'СЕРЦЕ ПУЩІ', 20, '#ead18f', 0.5).setDepth(11);
@@ -312,11 +312,11 @@ class RegionScene extends Phaser.Scene {
 
   private drawQuestRail() {
     const x = 1158;
-    const y = 290;
-    const w = 228;
-    const h = 388;
+    const y = 330;
+    const w = 236;
+    const h = 500;
     this.add.rectangle(x + 4, y + 5, w, h, 0x000000, 0.38).setDepth(11);
-    this.add.rectangle(x, y, w, h, PANEL, 0.91)
+    this.add.rectangle(x, y, w, h, PANEL, 0.98)
       .setStrokeStyle(2, GOLD, 0.65)
       .setDepth(12);
 
@@ -342,11 +342,11 @@ class RegionScene extends Phaser.Scene {
       }
     });
 
-    const open = this.add.rectangle(x, 446, 202, 44, 0x10231b, 0.94)
+    const open = this.add.rectangle(x, 518, 204, 44, 0x10231b, 0.97)
       .setStrokeStyle(1, GOLD, 0.72)
       .setInteractive({ useHandCursor: true })
       .setDepth(13);
-    const label = uiText(this, x, 446, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
+    const label = uiText(this, x, 518, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
     open.on('pointerover', () => open.setFillStyle(GREEN, 0.18));
     open.on('pointerout', () => open.setFillStyle(0x10231b, 0.94));
     open.on('pointerdown', () => this.openQuests());
@@ -1045,21 +1045,27 @@ class BattleScene extends Phaser.Scene {
   private drawBattleChrome() {
     // The concept art contains presentation-only HUD mockups. Cover those baked
     // elements and render one authoritative interactive HUD above the artwork.
-    this.add.rectangle(W / 2, 38, W, 76, 0x020806, 0.92)
+    this.add.rectangle(W / 2, 38, W, 76, 0x020806, 0.98)
       .setStrokeStyle(1, GOLD, 0.32)
       .setDepth(20);
-    this.add.rectangle(1138, 395, 284, 638, 0x020806, 0.9)
+    this.add.rectangle(1138, 395, 284, 638, 0x020806, 0.97)
       .setStrokeStyle(1, GOLD, 0.42)
       .setDepth(20);
-    this.add.rectangle(560, 653, 930, 134, 0x020806, 0.9)
+    this.add.rectangle(560, 653, 930, 134, 0x020806, 0.96)
       .setStrokeStyle(1, GOLD, 0.38)
       .setDepth(20);
-    this.add.rectangle(175, 135, 320, 104, 0x020806, 0.78)
+    this.add.rectangle(175, 145, 330, 128, 0x020806, 0.93)
       .setStrokeStyle(1, 0x7a8d76, 0.38)
       .setDepth(20);
 
-    uiText(this, 38, 105, `Вовк • рівень ${state.wolfLevel}`, 15, '#d9e1d8').setDepth(22);
-    uiText(this, 38, 132, 'Супутник атакує через «Поклик Вовка»', 12, '#9fb1a4').setDepth(22);
+    uiText(this, 38, 112, `Вовк • рівень ${state.wolfLevel}`, 15, '#d9e1d8').setDepth(22);
+    uiText(this, 38, 142, 'Супутник атакує через «Поклик Вовка»', 12, '#9fb1a4').setDepth(22);
+
+    this.add.rectangle(715, 103, 500, 44, 0x020806, 0.84)
+      .setStrokeStyle(1, 0x6c7d69, 0.38)
+      .setDepth(20);
+    uiText(this, 715, 103, this.encounter.boss ? 'Коріння • отрута • темна скверна' : 'Туман • скверна • різкі атаки', 13, '#b9c9bc', 0.5).setDepth(22);
+
     uiText(this, 1020, 105, 'БІЙ', 17, '#f0d18a').setDepth(22);
     uiText(this, 1020, 132, this.encounter.subtitle, 12, '#b7c5ba').setDepth(22);
   }
