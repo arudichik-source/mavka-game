@@ -323,8 +323,8 @@ class RegionScene extends Phaser.Scene {
     uiText(this, x - 94, 118, 'Завдання регіону', 17, '#f0d18a').setDepth(13);
     const rows: Array<{ id: QuestId; title: string; target: number }> = [
       { id: 'oak', title: 'Голос Старого Дуба', target: 3 },
-      { id: 'hunter', title: 'Стежками мисливця', target: 5 },
-      { id: 'mill', title: 'Чисті джерела', target: 1 }
+      { id: 'hunter', title: 'Стежками мисливця', target: 4 },
+      { id: 'mill', title: 'Таємниця Старого Млина', target: 1 }
     ];
     rows.forEach((q, i) => {
       const yy = 165 + i * 86;
