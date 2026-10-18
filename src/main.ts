@@ -268,8 +268,14 @@ const LANDMARKS: Landmark[] = [
   { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48, worldX: 325, worldY: 500, worldW: 300, worldH: 145 },
   { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46, worldX: 655, worldY: 515, worldW: 250, worldH: 140 },
   { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46, worldX: 890, worldY: 365, worldW: 220, worldH: 180 },
-  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1038, markerY: 540, markerSize: 64, labelX: 1142, labelY: 540, labelW: 185, labelH: 50, worldX: 980, worldY: 555, worldW: 190, worldH: 175 }
+  { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1015, markerY: 530, markerSize: 64, labelX: 920, labelY: 530, labelW: 185, labelH: 50, worldX: 960, worldY: 535, worldW: 150, worldH: 155 }
 ];
+
+const REGION_CROP = { x: 0, y: 60, w: 1040, h: 580 };
+const regionX = (x: number) => ((x - REGION_CROP.x) / REGION_CROP.w) * W;
+const regionY = (y: number) => ((y - REGION_CROP.y) / REGION_CROP.h) * H;
+const regionW = (w: number) => (w / REGION_CROP.w) * W;
+const regionH = (h: number) => (h / REGION_CROP.h) * H;
 
 class RegionScene extends Phaser.Scene {
   private modal?: Phaser.GameObjects.Container;
@@ -288,7 +294,12 @@ class RegionScene extends Phaser.Scene {
   }
 
   create() {
-    background(this, 'region-bg');
+    // Use only the illustrated world portion of the concept frame. The baked
+    // top HUD, right quest panel and bottom navigation are excluded completely.
+    this.add.image(W / 2, H / 2, 'region-bg')
+      .setCrop(REGION_CROP.x, REGION_CROP.y, REGION_CROP.w, REGION_CROP.h)
+      .setDisplaySize(W, H)
+      .setDepth(-20);
 
     this.drawTopHud();
     this.toastText = uiText(this, W / 2, 88, '', 16, '#fff0c8', 0.5).setDepth(70).setAlpha(0);
@@ -434,10 +445,10 @@ class RegionScene extends Phaser.Scene {
       });
     };
 
-    pulse(530, 150, 54, 0xf5ca67, 0.018, 0.07, 2200);
-    pulse(760, 195, 46, 0x79e6c0, 0.018, 0.08, 1800);
-    pulse(885, 352, 38, 0xffb95a, 0.014, 0.06, 1300);
-    pulse(985, 548, 70, 0x53d5bd, 0.018, 0.08, 2600);
+    pulse(regionX(530), regionY(150), regionW(54), 0xf5ca67, 0.018, 0.07, 2200);
+    pulse(regionX(760), regionY(195), regionW(46), 0x79e6c0, 0.018, 0.08, 1800);
+    pulse(regionX(885), regionY(352), regionW(38), 0xffb95a, 0.014, 0.06, 1300);
+    pulse(regionX(985), regionY(548), regionW(70), 0x53d5bd, 0.018, 0.08, 2600);
 
     // Water shimmer over the main falls.
     [
@@ -445,13 +456,15 @@ class RegionScene extends Phaser.Scene {
       { x: 655, y: 405, w: 16, h: 86, delay: 450 },
       { x: 770, y: 438, w: 14, h: 72, delay: 820 }
     ].forEach(({ x, y, w, h, delay }) => {
-      const shimmer = this.add.ellipse(x, y, w, h, 0xc7ffff, 0.025)
+      const sx = regionX(x);
+      const sy = regionY(y);
+      const shimmer = this.add.ellipse(sx, sy, regionW(w), regionH(h), 0xc7ffff, 0.025)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(2);
       this.tweens.add({
         targets: shimmer,
         alpha: { from: 0.015, to: 0.09 },
-        y: y + 10,
+        y: sy + regionH(10),
         duration: 1500,
         delay,
         yoyo: true,
@@ -462,11 +475,17 @@ class RegionScene extends Phaser.Scene {
 
     // Slow swamp mist gives the lower-right zone a living silhouette.
     for (let i = 0; i < 5; i++) {
-      const mist = this.add.ellipse(900 + i * 42, 548 + (i % 2) * 22, 130, 28, 0x7fd6c0, 0.025)
-        .setDepth(2);
+      const mist = this.add.ellipse(
+        regionX(900 + i * 42),
+        regionY(548 + (i % 2) * 22),
+        regionW(130),
+        regionH(28),
+        0x7fd6c0,
+        0.025
+      ).setDepth(2);
       this.tweens.add({
         targets: mist,
-        x: mist.x + Phaser.Math.Between(28, 54),
+        x: mist.x + regionW(Phaser.Math.Between(28, 54)),
         alpha: { from: 0.015, to: 0.065 },
         duration: 4200 + i * 500,
         yoyo: true,
@@ -476,8 +495,10 @@ class RegionScene extends Phaser.Scene {
     }
 
     for (let i = 0; i < 22; i++) {
-      const x = Phaser.Math.Between(120, 1010);
-      const y = Phaser.Math.Between(120, 590);
+      const sourceX = Phaser.Math.Between(120, 1010);
+      const sourceY = Phaser.Math.Between(120, 590);
+      const x = regionX(sourceX);
+      const y = regionY(sourceY);
       const mote = this.add.circle(x, y, Phaser.Math.Between(1, 2), i % 4 === 0 ? 0xffd77a : 0xa0e3ad, 0.16)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(3);
@@ -496,24 +517,36 @@ class RegionScene extends Phaser.Scene {
 
   private makeLandmarks() {
     LANDMARKS.forEach((spot) => {
+      const markerX = regionX(spot.markerX);
+      const markerY = regionY(spot.markerY);
+      const markerSize = regionW(spot.markerSize);
+      const labelX = regionX(spot.labelX);
+      const labelY = regionY(spot.labelY);
+      const labelW = regionW(spot.labelW);
+      const labelH = regionH(spot.labelH);
+      const worldX = regionX(spot.worldX);
+      const worldY = regionY(spot.worldY);
+      const worldW = regionW(spot.worldW);
+      const worldH = regionH(spot.worldH);
+
       const plateAccent = spot.id === 'swamp' ? 0x65d69d : GOLD;
-      const labelPlate = this.add.rectangle(spot.labelX, spot.labelY, spot.labelW, spot.labelH, 0x06100c, 0.94)
+      const labelPlate = this.add.rectangle(labelX, labelY, labelW, labelH, 0x06100c, 0.94)
         .setStrokeStyle(1, plateAccent, 0.72)
         .setDepth(7);
-      const crispName = uiText(this, spot.labelX - spot.labelW / 2 + 12, spot.labelY - 9, spot.name, 14, '#f4e4b7').setDepth(8);
-      const crispSub = uiText(this, spot.labelX - spot.labelW / 2 + 12, spot.labelY + 11, spot.subtitle, 10, '#a9b7aa').setDepth(8);
+      const crispName = uiText(this, labelX - labelW / 2 + 12, labelY - 9, spot.name, 14, '#f4e4b7').setDepth(8);
+      const crispSub = uiText(this, labelX - labelW / 2 + 12, labelY + 11, spot.subtitle, 10, '#a9b7aa').setDepth(8);
 
       const glow = this.add.circle(
-        spot.markerX,
-        spot.markerY,
-        spot.markerSize * 0.62,
+        markerX,
+        markerY,
+        markerSize * 0.62,
         spot.id === 'swamp' ? 0x63d991 : 0xf0cf78,
         0
       ).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0)
         .setDepth(7);
 
-      const tooltipX = Phaser.Math.Clamp(spot.markerX, 165, W - 165);
-      const tooltipY = Math.max(92, spot.markerY - spot.markerSize * 0.95);
+      const tooltipX = Phaser.Math.Clamp(markerX, 165, W - 165);
+      const tooltipY = Math.max(92, markerY - markerSize * 0.95);
       const tooltipBg = this.add.rectangle(
         tooltipX,
         tooltipY,
@@ -533,18 +566,18 @@ class RegionScene extends Phaser.Scene {
       ).setDepth(32).setAlpha(0);
 
       const markerHit = this.add.circle(
-        spot.markerX,
-        spot.markerY,
-        spot.markerSize * 0.52,
+        markerX,
+        markerY,
+        markerSize * 0.52,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
 
       const labelHit = this.add.rectangle(
-        spot.labelX,
-        spot.labelY,
-        spot.labelW,
-        spot.labelH,
+        labelX,
+        labelY,
+        labelW,
+        labelH,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
@@ -552,10 +585,10 @@ class RegionScene extends Phaser.Scene {
       // Invisible, image-aligned hotspot over the illustrated landmark itself.
       // It has no visible border; the only hover feedback is the painted marker glow.
       const worldHit = this.add.rectangle(
-        spot.worldX,
-        spot.worldY,
-        spot.worldW,
-        spot.worldH,
+        worldX,
+        worldY,
+        worldW,
+        worldH,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(6);
