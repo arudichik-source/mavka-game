@@ -262,12 +262,12 @@ type Landmark = {
 };
 
 const LANDMARKS: Landmark[] = [
-  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 215, labelY: 292, labelW: 185, labelH: 48, worldX: 230, worldY: 355, worldW: 290, worldH: 190 },
-  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 493, labelY: 164, labelW: 170, labelH: 46, worldX: 535, worldY: 245, worldW: 255, worldH: 275 },
-  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 832, labelY: 208, labelW: 170, labelH: 46, worldX: 795, worldY: 185, worldW: 210, worldH: 165 },
-  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 312, labelY: 532, labelW: 190, labelH: 48, worldX: 325, worldY: 500, worldW: 300, worldH: 145 },
-  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 707, labelY: 505, labelW: 155, labelH: 46, worldX: 655, worldY: 515, worldW: 250, worldH: 140 },
-  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 925, labelY: 350, labelW: 170, labelH: 46, worldX: 890, worldY: 365, worldW: 220, worldH: 180 },
+  { id: 'settlement', name: 'Поселення Мавки', subtitle: 'Табір, лікування та припаси', markerX: 104, markerY: 292, markerSize: 58, labelX: 205, labelY: 350, labelW: 190, labelH: 50, worldX: 230, worldY: 355, worldW: 290, worldH: 190 },
+  { id: 'oak', name: 'Старий Дуб', subtitle: 'Щоденне благословення духів', markerX: 397, markerY: 164, markerSize: 56, labelX: 480, labelY: 220, labelW: 178, labelH: 48, worldX: 535, worldY: 245, worldW: 255, worldH: 275 },
+  { id: 'shrine', name: 'Святилище', subtitle: 'Відновлення мани', markerX: 738, markerY: 208, markerSize: 58, labelX: 815, labelY: 270, labelW: 180, labelH: 48, worldX: 795, worldY: 185, worldW: 210, worldH: 165 },
+  { id: 'hunter', name: 'Стежка Мисливця', subtitle: 'Полювання та ресурси', markerX: 212, markerY: 532, markerSize: 58, labelX: 285, labelY: 492, labelW: 195, labelH: 50, worldX: 325, worldY: 500, worldW: 300, worldH: 145 },
+  { id: 'yarin', name: 'Ярин Дол', subtitle: 'Лікарські трави', markerX: 622, markerY: 505, markerSize: 56, labelX: 682, labelY: 552, labelW: 165, labelH: 48, worldX: 655, worldY: 515, worldW: 250, worldH: 140 },
+  { id: 'mill', name: 'Старий Млин', subtitle: 'Крамниця і завдання', markerX: 832, markerY: 350, markerSize: 58, labelX: 900, labelY: 407, labelW: 178, labelH: 48, worldX: 890, worldY: 365, worldW: 220, worldH: 180 },
   { id: 'swamp', name: 'Туманні Болота', subtitle: 'Бойова зона • рівень 5+', markerX: 1015, markerY: 530, markerSize: 64, labelX: 920, labelY: 530, labelW: 185, labelH: 50, worldX: 960, worldY: 535, worldW: 150, worldH: 155 }
 ];
 
