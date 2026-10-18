@@ -1017,7 +1017,7 @@ class BattleScene extends Phaser.Scene {
     this.auto = false;
     this.cooldowns = [false, false, false, false, false];
 
-    this.add.rectangle(W / 2, 28, W, 56, 0x020806, 0.44).setDepth(20);
+    this.drawBattleChrome();
     this.drawBars();
     this.drawSkills();
     this.drawBattleControls();
@@ -1042,46 +1042,81 @@ class BattleScene extends Phaser.Scene {
     });
   }
 
-  private drawBars() {
-    const heroX = 88;
-    this.add.rectangle(heroX, 33, 300, 18, 0x29100e, 0.92).setOrigin(0, 0.5).setDepth(30);
-    this.hpFill = this.add.rectangle(heroX, 33, 300, 18, RED, 1).setOrigin(0, 0.5).setDepth(31);
-    this.hpText = uiText(this, heroX + 150, 33, '', 13, '#fff6e8', 0.5).setDepth(32);
-    this.add.rectangle(heroX, 54, 300, 12, 0x0c2233, 0.92).setOrigin(0, 0.5).setDepth(30);
-    this.manaFill = this.add.rectangle(heroX, 54, 300, 12, 0x3b92d0, 1).setOrigin(0, 0.5).setDepth(31);
-    this.manaText = uiText(this, heroX + 150, 54, '', 11, '#eef8ff', 0.5).setDepth(32);
+  private drawBattleChrome() {
+    // The concept art contains presentation-only HUD mockups. Cover those baked
+    // elements and render one authoritative interactive HUD above the artwork.
+    this.add.rectangle(W / 2, 38, W, 76, 0x020806, 0.92)
+      .setStrokeStyle(1, GOLD, 0.32)
+      .setDepth(20);
+    this.add.rectangle(1138, 395, 284, 638, 0x020806, 0.9)
+      .setStrokeStyle(1, GOLD, 0.42)
+      .setDepth(20);
+    this.add.rectangle(560, 653, 930, 134, 0x020806, 0.9)
+      .setStrokeStyle(1, GOLD, 0.38)
+      .setDepth(20);
+    this.add.rectangle(175, 135, 320, 104, 0x020806, 0.78)
+      .setStrokeStyle(1, 0x7a8d76, 0.38)
+      .setDepth(20);
 
-    this.add.rectangle(560, 33, 430, 20, 0x28100e, 0.94).setOrigin(0, 0.5).setDepth(30);
-    this.enemyFill = this.add.rectangle(560, 33, 430, 20, 0xb63f35, 1).setOrigin(0, 0.5).setDepth(31);
-    this.enemyText = uiText(this, 775, 33, '', 13, '#fff3df', 0.5).setDepth(32);
+    uiText(this, 38, 105, `Вовк • рівень ${state.wolfLevel}`, 15, '#d9e1d8').setDepth(22);
+    uiText(this, 38, 132, 'Супутник атакує через «Поклик Вовка»', 12, '#9fb1a4').setDepth(22);
+    uiText(this, 1020, 105, 'БІЙ', 17, '#f0d18a').setDepth(22);
+    uiText(this, 1020, 132, this.encounter.subtitle, 12, '#b7c5ba').setDepth(22);
+  }
+
+  private drawBars() {
+    const heroX = 24;
+    uiText(this, heroX, 17, 'МАВКА', 12, '#e6d4a4').setDepth(32);
+    this.add.rectangle(heroX, 38, 350, 18, 0x29100e, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.hpFill = this.add.rectangle(heroX, 38, 350, 18, RED, 1).setOrigin(0, 0.5).setDepth(31);
+    this.hpText = uiText(this, heroX + 175, 38, '', 13, '#fff6e8', 0.5).setDepth(32);
+    this.add.rectangle(heroX, 61, 350, 11, 0x0c2233, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.manaFill = this.add.rectangle(heroX, 61, 350, 11, 0x3b92d0, 1).setOrigin(0, 0.5).setDepth(31);
+    this.manaText = uiText(this, heroX + 175, 61, '', 11, '#eef8ff', 0.5).setDepth(32);
+
+    const enemyX = 450;
+    uiText(this, enemyX, 17, this.encounter.name.toUpperCase(), 12, '#e6d4a4').setDepth(32);
+    this.add.rectangle(enemyX, 38, 500, 20, 0x28100e, 0.96).setOrigin(0, 0.5).setDepth(30);
+    this.enemyFill = this.add.rectangle(enemyX, 38, 500, 20, 0xb63f35, 1).setOrigin(0, 0.5).setDepth(31);
+    this.enemyText = uiText(this, enemyX + 250, 38, '', 13, '#fff3df', 0.5).setDepth(32);
   }
 
   private drawSkills() {
-    const xs = [248, 398, 548, 698, 848];
+    const xs = [160, 335, 510, 685, 860];
     xs.forEach((x, i) => {
-      const hit = this.add.rectangle(x, 645, 126, 110, SKILLS[i].color, 0.001)
-        .setStrokeStyle(2, SKILLS[i].color, 0)
+      const hit = this.add.rectangle(x, 650, 158, 104, 0x0d1713, 0.96)
+        .setStrokeStyle(2, SKILLS[i].color, 0.72)
         .setInteractive({ useHandCursor: true })
         .setDepth(35);
-      const cd = uiText(this, x, 645, '', 18, '#fff4d8', 0.5).setDepth(37);
-      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.11).setStrokeStyle(2, SKILLS[i].color, 0.9));
-      hit.on('pointerout', () => hit.setFillStyle(SKILLS[i].color, 0.001).setStrokeStyle(2, SKILLS[i].color, 0));
+      const number = uiText(this, x - 64, 612, `${i + 1}`, 12, '#e8d39c', 0.5).setDepth(36);
+      const name = uiText(this, x, 634, SKILLS[i].name, 14, '#f2e6c9', 0.5).setDepth(36);
+      const cost = uiText(this, x, 665, `${SKILLS[i].cost} мани`, 12, '#7ecff1', 0.5).setDepth(36);
+      const cd = uiText(this, x, 650, '', 22, '#fff4d8', 0.5).setDepth(38);
+      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.18).setStrokeStyle(2, SKILLS[i].color, 1));
+      hit.on('pointerout', () => hit.setFillStyle(0x0d1713, 0.96).setStrokeStyle(2, SKILLS[i].color, 0.72));
       hit.on('pointerdown', () => this.useSkill(i));
       this.skillOverlays.push(hit);
       this.skillCdTexts.push(cd);
+      void number; void name; void cost;
     });
   }
 
   private drawBattleControls() {
-    const ether = button(this, 1045, 540, 175, 42, `Ефір ×${state.ether}`, () => this.useEther(), CYAN);
+    uiText(this, 1015, 176, 'Журнал бою', 16, '#e9d08c').setDepth(41);
+    this.logText = uiText(this, 1015, 218, '', 14, '#e9dfc8')
+      .setWordWrapWidth(225).setLineSpacing(5).setDepth(42);
+
+    uiText(this, 1015, 390, 'Припаси', 16, '#e9d08c').setDepth(41);
+
+    const ether = button(this, 1138, 444, 220, 42, `Ефір ×${state.ether}`, () => this.useEther(), CYAN);
     ether.box.setDepth(40); ether.label.setDepth(41);
     this.etherText = ether.label;
 
-    const potion = button(this, 1045, 592, 175, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
+    const potion = button(this, 1138, 496, 220, 42, `Зілля ×${state.potions}`, () => this.usePotion(), 0xc76f5a);
     potion.box.setDepth(40); potion.label.setDepth(41);
     this.potionText = potion.label;
 
-    const auto = button(this, 1045, 644, 175, 42, 'Автобій: ВИМК', () => {
+    const auto = button(this, 1138, 548, 220, 42, 'Автобій: ВИМК', () => {
       this.auto = !this.auto;
       this.autoText.setText(this.auto ? 'Автобій: УВІМК' : 'Автобій: ВИМК');
       this.log(this.auto ? 'Автобій увімкнено.' : 'Автобій вимкнено.');
@@ -1089,16 +1124,13 @@ class BattleScene extends Phaser.Scene {
     auto.box.setDepth(40); auto.label.setDepth(41);
     this.autoText = auto.label;
 
-    const retreat = button(this, 1180, 86, 150, 38, 'Відступити', () => {
+    const retreat = button(this, 1138, 606, 220, 42, 'Відступити', () => {
       state.hp = Math.max(1, this.heroHp);
       state.mana = this.heroMana;
       saveState(state);
       this.scene.start('region');
     }, 0xa7784e);
     retreat.box.setDepth(40); retreat.label.setDepth(41);
-
-    this.logText = uiText(this, 1045, 445, '', 14, '#e9dfc8', 0.5)
-      .setWordWrapWidth(300).setAlign('center').setDepth(42);
   }
 
   private useSkill(index: number) {
@@ -1262,9 +1294,9 @@ class BattleScene extends Phaser.Scene {
     const hpRatio = Phaser.Math.Clamp(this.heroHp / state.maxHp, 0, 1);
     const manaRatio = Phaser.Math.Clamp(this.heroMana / state.maxMana, 0, 1);
     const enemyRatio = Phaser.Math.Clamp(this.enemyHp / this.enemyMax, 0, 1);
-    this.hpFill.displayWidth = 300 * hpRatio;
-    this.manaFill.displayWidth = 300 * manaRatio;
-    this.enemyFill.displayWidth = 430 * enemyRatio;
+    this.hpFill.displayWidth = 350 * hpRatio;
+    this.manaFill.displayWidth = 350 * manaRatio;
+    this.enemyFill.displayWidth = 500 * enemyRatio;
     this.hpText.setText(`Мавка  ${this.heroHp}/${state.maxHp}`);
     this.manaText.setText(`Мана ${this.heroMana}/${state.maxMana}`);
     this.enemyText.setText(`${this.encounter.name}  ${this.enemyHp}/${this.enemyMax}`);
