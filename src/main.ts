@@ -276,6 +276,12 @@ class RegionScene extends Phaser.Scene {
   private resourceText!: Phaser.GameObjects.Text;
   private profileText!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
+  private hudHpFill!: Phaser.GameObjects.Rectangle;
+  private hudManaFill!: Phaser.GameObjects.Rectangle;
+  private hudHpText!: Phaser.GameObjects.Text;
+  private hudManaText!: Phaser.GameObjects.Text;
+  private questRail?: Phaser.GameObjects.Container;
+  private questRailOpen = false;
 
   constructor() {
     super('region');
@@ -284,22 +290,16 @@ class RegionScene extends Phaser.Scene {
   create() {
     background(this, 'region-bg');
 
-    // The illustration contains concept HUD artwork. Cover its baked counters and
-    // render the real game state on top so the player never sees two sets of values.
-    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.98)
-      .setStrokeStyle(1, GOLD, 0.34)
-      .setDepth(10);
-    gameText(this, W / 2, 28, 'СЕРЦЕ ПУЩІ', 20, '#ead18f', 0.5).setDepth(11);
-
-    this.profileText = uiText(this, 22, 29, '', 15, '#f5e8c5').setDepth(11);
-    this.resourceText = uiText(this, W - 22, 29, '', 15, '#f4dda1', 1).setDepth(11);
-    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
+    this.drawTopHud();
+    this.toastText = uiText(this, W / 2, 88, '', 16, '#fff0c8', 0.5).setDepth(70).setAlpha(0);
 
     this.addRegionAtmosphere();
-    this.drawQuestRail();
     this.makeLandmarks();
+    this.drawQuestRail();
     this.makeNav();
     this.refreshHud();
+
+    this.input.keyboard?.on('keydown-ESC', () => this.closeModal());
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
     if (!state.seenIntro) {
@@ -309,52 +309,113 @@ class RegionScene extends Phaser.Scene {
     }
   }
 
+  private drawTopHud() {
+    this.add.rectangle(W / 2, 34, W, 68, 0x020806, 0.985)
+      .setStrokeStyle(1, GOLD, 0.42)
+      .setDepth(40);
+
+    this.add.rectangle(188, 34, 350, 54, 0x07120e, 0.96)
+      .setStrokeStyle(1, 0x6f633c, 0.55)
+      .setDepth(41);
+    this.add.circle(42, 34, 20, 0x1e4d35, 1)
+      .setStrokeStyle(2, GOLD, 0.75)
+      .setDepth(42);
+    gameText(this, 42, 34, 'М', 18, '#f0d487', 0.5).setDepth(43);
+
+    this.profileText = uiText(this, 74, 20, '', 14, '#f7ecd2').setDepth(43);
+    this.add.rectangle(74, 40, 140, 9, 0x2b1512, 1).setOrigin(0, 0.5).setDepth(42);
+    this.hudHpFill = this.add.rectangle(74, 40, 140, 9, RED, 1).setOrigin(0, 0.5).setDepth(43);
+    this.hudHpText = uiText(this, 220, 40, '', 11, '#f6ddd5').setDepth(43);
+    this.add.rectangle(74, 55, 140, 7, 0x0c2635, 1).setOrigin(0, 0.5).setDepth(42);
+    this.hudManaFill = this.add.rectangle(74, 55, 140, 7, 0x3c93c9, 1).setOrigin(0, 0.5).setDepth(43);
+    this.hudManaText = uiText(this, 220, 55, '', 11, '#d9f2ff').setDepth(43);
+
+    gameText(this, W / 2, 31, 'СЕРЦЕ ПУЩІ', 21, '#ead18f', 0.5).setDepth(43);
+    uiText(this, W / 2, 53, 'Розділ I', 11, '#9eaa9d', 0.5).setDepth(43);
+
+    this.add.rectangle(1085, 34, 365, 54, 0x07120e, 0.96)
+      .setStrokeStyle(1, 0x6f633c, 0.55)
+      .setDepth(41);
+    this.resourceText = uiText(this, 1250, 34, '', 15, '#f4dda1', 1).setDepth(43);
+  }
+
   private refreshHud() {
-    this.profileText.setText(`Мавка • рівень ${state.level}     ❤ ${state.hp}/${state.maxHp}     ✦ ${state.mana}/${state.maxMana}`);
-    this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
+    this.profileText.setText(`Мавка • рівень ${state.level}`);
+    this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}    ◆ ${state.crystals}    ☘ ${state.herbs}`);
+    this.hudHpFill.displayWidth = 140 * Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1);
+    this.hudManaFill.displayWidth = 140 * Phaser.Math.Clamp(state.mana / state.maxMana, 0, 1);
+    this.hudHpText.setText(`${state.hp}/${state.maxHp}`);
+    this.hudManaText.setText(`${state.mana}/${state.maxMana}`);
   }
 
   private drawQuestRail() {
-    const x = 1158;
-    const y = 330;
-    const w = 236;
-    const h = 500;
-    this.add.rectangle(x + 4, y + 5, w, h, 0x000000, 0.38).setDepth(11);
-    this.add.rectangle(x, y, w, h, PANEL, 0.98)
-      .setStrokeStyle(2, GOLD, 0.65)
-      .setDepth(12);
+    this.questRail?.destroy(true);
+    const c = this.add.container(0, 0).setDepth(46);
+    this.questRail = c;
+    this.questRailOpen = false;
 
-    uiText(this, x - 94, 118, 'Завдання регіону', 17, '#f0d18a').setDepth(13);
+    const x = 1158;
+    const y = 304;
+    const w = 236;
+    const h = 438;
+
+    const shadow = this.add.rectangle(x + 5, y + 6, w, h, 0x000000, 0.4);
+    const panelBg = this.add.rectangle(x, y, w, h, PANEL, 0.985)
+      .setStrokeStyle(2, GOLD, 0.72);
+    const title = uiText(this, x - 92, 103, 'Завдання регіону', 17, '#f0d18a');
+
     const rows: Array<{ id: QuestId; title: string; target: number }> = [
       { id: 'oak', title: 'Голос Старого Дуба', target: 3 },
       { id: 'hunter', title: 'Стежками мисливця', target: 4 },
       { id: 'mill', title: 'Таємниця Старого Млина', target: 1 }
     ];
+
+    const children: Phaser.GameObjects.GameObject[] = [shadow, panelBg, title];
     rows.forEach((q, i) => {
-      const yy = 165 + i * 86;
+      const yy = 155 + i * 88;
       const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
       const done = state.claimedQuests.includes(q.id);
-      this.add.rectangle(x, yy, 204, 72, done ? 0x123522 : 0x0d1915, 0.9)
-        .setStrokeStyle(1, done ? 0x6fc78c : 0x806b3a, 0.58)
-        .setDepth(13);
-      uiText(this, x - 88, yy - 18, q.title, 14, done ? '#9ee3ad' : '#ead497').setDepth(14);
-      uiText(this, x - 88, yy + 10, done ? 'Виконано' : `${current}/${q.target}`, 13, done ? '#8fe0a5' : '#c9bea3').setDepth(14);
+      const row = this.add.rectangle(x, yy, 204, 72, done ? 0x123522 : 0x0d1915, 0.94)
+        .setStrokeStyle(1, done ? 0x6fc78c : 0x806b3a, 0.64);
+      const rowTitle = uiText(this, x - 88, yy - 18, q.title, 14, done ? '#9ee3ad' : '#ead497');
+      const progress = uiText(this, x - 88, yy + 10, done ? 'Виконано' : `${current}/${q.target}`, 13, done ? '#8fe0a5' : '#c9bea3');
+      children.push(row, rowTitle, progress);
       if (!done) {
-        const ratio = q.target ? current / q.target : 0;
-        this.add.rectangle(x - 88, yy + 27, 174, 5, 0x263029, 1).setOrigin(0, 0.5).setDepth(14);
-        this.add.rectangle(x - 88, yy + 27, 174 * ratio, 5, 0x62c98a, 1).setOrigin(0, 0.5).setDepth(15);
+        const base = this.add.rectangle(x - 88, yy + 27, 174, 5, 0x263029, 1).setOrigin(0, 0.5);
+        const fill = this.add.rectangle(x - 88, yy + 27, 174 * (current / q.target), 5, 0x62c98a, 1).setOrigin(0, 0.5);
+        children.push(base, fill);
       }
     });
 
-    const open = this.add.rectangle(x, 518, 204, 44, 0x10231b, 0.97)
-      .setStrokeStyle(1, GOLD, 0.72)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(13);
-    const label = uiText(this, x, 518, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
-    open.on('pointerover', () => open.setFillStyle(GREEN, 0.18));
-    open.on('pointerout', () => open.setFillStyle(0x10231b, 0.94));
-    open.on('pointerdown', () => this.openQuests());
-    label.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openQuests());
+    const openJournal = button(this, x, 438, 198, 40, 'Відкрити журнал', () => this.openQuests(), 0x9f8149);
+    children.push(openJournal.box, openJournal.label);
+
+    const toggle = this.add.rectangle(1018, 220, 42, 118, 0x07120e, 0.98)
+      .setStrokeStyle(2, GOLD, 0.75)
+      .setInteractive({ useHandCursor: true });
+    const toggleLabel = uiText(this, 1018, 220, 'ЗАВДАННЯ', 12, '#ecd38e', 0.5).setAngle(-90);
+    const toggleArrow = uiText(this, 1018, 265, '◀', 15, '#9ed3ab', 0.5);
+    children.push(toggle, toggleLabel, toggleArrow);
+    c.add(children);
+
+    const setOpen = (open: boolean) => {
+      this.questRailOpen = open;
+      this.tweens.add({
+        targets: c,
+        x: open ? 0 : 220,
+        duration: 220,
+        ease: 'Cubic.out'
+      });
+      toggleArrow.setText(open ? '▶' : '◀');
+    };
+
+    toggle.on('pointerover', () => toggle.setFillStyle(GREEN, 0.18));
+    toggle.on('pointerout', () => toggle.setFillStyle(0x07120e, 0.98));
+    toggle.on('pointerdown', () => setOpen(!this.questRailOpen));
+    toggleLabel.setInteractive({ useHandCursor: true }).on('pointerdown', () => setOpen(!this.questRailOpen));
+    toggleArrow.setInteractive({ useHandCursor: true }).on('pointerdown', () => setOpen(!this.questRailOpen));
+
+    c.x = 220;
   }
 
   private addRegionAtmosphere() {
@@ -435,6 +496,13 @@ class RegionScene extends Phaser.Scene {
 
   private makeLandmarks() {
     LANDMARKS.forEach((spot) => {
+      const plateAccent = spot.id === 'swamp' ? 0x65d69d : GOLD;
+      const labelPlate = this.add.rectangle(spot.labelX, spot.labelY, spot.labelW, spot.labelH, 0x06100c, 0.94)
+        .setStrokeStyle(1, plateAccent, 0.72)
+        .setDepth(7);
+      const crispName = uiText(this, spot.labelX - spot.labelW / 2 + 12, spot.labelY - 9, spot.name, 14, '#f4e4b7').setDepth(8);
+      const crispSub = uiText(this, spot.labelX - spot.labelW / 2 + 12, spot.labelY + 11, spot.subtitle, 10, '#a9b7aa').setDepth(8);
+
       const glow = this.add.circle(
         spot.markerX,
         spot.markerY,
@@ -495,6 +563,8 @@ class RegionScene extends Phaser.Scene {
       let hoverDepth = 0;
       const showHover = () => {
         hoverDepth += 1;
+        labelPlate.setFillStyle(spot.id === 'swamp' ? 0x0c241b : 0x17180f, 0.98).setStrokeStyle(1, plateAccent, 1);
+        crispName.setColor('#fff0c9');
         glow.setAlpha(0.18).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0.95);
         tooltipBg.setAlpha(1);
         tooltip.setAlpha(1);
@@ -505,6 +575,8 @@ class RegionScene extends Phaser.Scene {
         hoverDepth = Math.max(0, hoverDepth - 1);
         this.time.delayedCall(25, () => {
           if (hoverDepth !== 0) return;
+          labelPlate.setFillStyle(0x06100c, 0.94).setStrokeStyle(1, plateAccent, 0.72);
+          crispName.setColor('#f4e4b7');
           glow.setAlpha(0).setStrokeStyle(3, 0xffffff, 0).setScale(1);
           tooltipBg.setAlpha(0);
           tooltip.setAlpha(0);
@@ -531,19 +603,39 @@ class RegionScene extends Phaser.Scene {
   }
 
   private makeNav() {
-    // Hit areas follow the four painted navigation buttons in the artwork.
+    this.add.rectangle(W / 2, 681, W, 78, 0x020806, 0.97)
+      .setStrokeStyle(1, GOLD, 0.38)
+      .setDepth(44);
+
     const items = [
-      { x: 190, w: 270, action: () => this.closeModal() },
-      { x: 500, w: 270, action: () => this.openQuests() },
-      { x: 820, w: 270, action: () => this.openInventory() },
-      { x: 1135, w: 240, action: () => this.openCamp() }
+      { x: 140, icon: '⌘', label: 'Карта', action: () => this.closeModal(), accent: 0x6fb788 },
+      { x: 390, icon: '✦', label: 'Завдання', action: () => this.openQuests(), accent: 0xc29a4a },
+      { x: 640, icon: '▣', label: 'Рюкзак', action: () => this.openInventory(), accent: 0x6fa4bb },
+      { x: 890, icon: '☷', label: 'Літопис', action: () => this.openChronicle(), accent: 0x8e86bf },
+      { x: 1140, icon: '♨', label: 'Табір', action: () => this.openCamp(), accent: 0xbd7f52 }
     ];
+
     items.forEach((item) => {
-      const hit = this.add.rectangle(item.x, 675, item.w, 68, 0xf0d18c, 0.001)
-        .setInteractive({ useHandCursor: true }).setDepth(20);
-      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.07).setStrokeStyle(1, 0xf0d18c, 0.45));
-      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0));
-      hit.on('pointerdown', item.action);
+      const box = this.add.rectangle(item.x, 681, 214, 48, 0x0b1712, 0.98)
+        .setStrokeStyle(1, item.accent, 0.72)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(45);
+      const icon = uiText(this, item.x - 76, 681, item.icon, 18, '#e9d699', 0.5).setDepth(46);
+      const label = uiText(this, item.x + 8, 681, item.label, 15, '#f1e6cb', 0.5).setDepth(46);
+      const hoverOn = () => {
+        box.setFillStyle(item.accent, 0.18).setStrokeStyle(2, item.accent, 1);
+        label.setColor('#fff3d0');
+      };
+      const hoverOff = () => {
+        box.setFillStyle(0x0b1712, 0.98).setStrokeStyle(1, item.accent, 0.72);
+        label.setColor('#f1e6cb');
+      };
+      [box, icon, label].forEach((target) => {
+        target.setInteractive({ useHandCursor: true });
+        target.on('pointerover', hoverOn);
+        target.on('pointerout', hoverOff);
+        target.on('pointerdown', item.action);
+      });
     });
   }
 
@@ -565,7 +657,8 @@ class RegionScene extends Phaser.Scene {
   private baseModal(title: string, subtitle: string, width = 640, height = 430) {
     this.closeModal();
     const c = this.add.container(0, 0).setDepth(80);
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setInteractive();
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.66).setInteractive();
+    shade.on('pointerdown', () => this.closeModal());
     const parts = ornatePanel(this, W / 2, H / 2, width, height);
     const heading = gameText(this, W / 2, H / 2 - height / 2 + 48, title, 28, GOLD_LIGHT, 0.5);
     const sub = uiText(this, W / 2, H / 2 - height / 2 + 82, subtitle, 15, '#bfcbbb', 0.5);
@@ -573,6 +666,8 @@ class RegionScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     x.on('pointerdown', () => this.closeModal());
     c.add([shade, ...parts, heading, sub, x]);
+    c.setAlpha(0).setScale(0.965);
+    this.tweens.add({ targets: c, alpha: 1, scale: 1, duration: 180, ease: 'Cubic.out' });
     this.modal = c;
     return c;
   }
@@ -956,8 +1051,17 @@ class RegionScene extends Phaser.Scene {
   }
 
   private closeModal() {
-    this.modal?.destroy(true);
+    if (!this.modal) return;
+    const modal = this.modal;
     this.modal = undefined;
+    this.tweens.add({
+      targets: modal,
+      alpha: 0,
+      scale: 0.98,
+      duration: 120,
+      ease: 'Cubic.in',
+      onComplete: () => modal.destroy(true)
+    });
   }
 }
 
