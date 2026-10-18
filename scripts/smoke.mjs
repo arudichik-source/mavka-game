@@ -93,8 +93,9 @@ await page.mouse.click(870, 420);
 await page.waitForFunction(() => {
   const game = window.__MAVKA_GAME__;
   const region = game?.scene?.getScene('region');
-  return region?.children?.list?.some((child) => child?.type === 'Text' && child?.text === 'Старий Млин');
+  return Boolean(region?.modal?.active);
 }, null, { timeout: 5_000 });
+await page.screenshot({ path: 'visual-qa/mill-direct-click.png', fullPage: true });
 await page.mouse.click(955, 165);
 await page.waitForTimeout(180);
 
