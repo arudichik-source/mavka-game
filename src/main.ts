@@ -316,41 +316,43 @@ class RegionScene extends Phaser.Scene {
   }
 
   private drawQuestRail() {
-    const x = 1162;
-    const y = 252;
-    const w = 206;
-    const h = 286;
-    const panel = this.add.rectangle(x, y, w, h, PANEL, 0.82)
-      .setStrokeStyle(1, GOLD, 0.48)
+    // Cover the baked mock quest panel completely, but keep the replacement quiet
+    // and within the exact same footprint so it does not steal more world space.
+    const x = 1156;
+    const y = 248;
+    const w = 226;
+    const h = 350;
+    const panel = this.add.rectangle(x, y, w, h, 0x04100c, 0.97)
+      .setStrokeStyle(1, GOLD, 0.38)
       .setDepth(12);
-    const title = uiText(this, x - 84, 132, 'Завдання', 15, '#f0d18a').setDepth(13);
+    const title = uiText(this, x - 92, 92, 'Завдання регіону', 14, '#ead18f').setDepth(13);
 
     const rows: Array<{ id: QuestId; title: string; target: number }> = [
       { id: 'oak', title: 'Старий Дуб', target: 3 },
-      { id: 'hunter', title: 'Мисливець', target: 4 },
+      { id: 'hunter', title: 'Стежка Мисливця', target: 4 },
       { id: 'mill', title: 'Старий Млин', target: 1 }
     ];
 
     rows.forEach((q, i) => {
-      const yy = 176 + i * 62;
+      const yy = 142 + i * 74;
       const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
       const done = state.claimedQuests.includes(q.id);
-      uiText(this, x - 82, yy - 10, q.title, 13, done ? '#8edaa2' : '#ddd0ad').setDepth(13);
-      uiText(this, x + 82, yy - 10, done ? '✓' : `${current}/${q.target}`, 12, done ? '#8edaa2' : '#c7b986', 1).setDepth(13);
-      const base = this.add.rectangle(x - 82, yy + 14, 164, 4, 0x253029, 0.95).setOrigin(0, 0.5).setDepth(13);
+      uiText(this, x - 92, yy - 8, q.title, 13, done ? '#8edaa2' : '#ddd0ad').setDepth(13);
+      uiText(this, x + 92, yy - 8, done ? '✓' : `${current}/${q.target}`, 12, done ? '#8edaa2' : '#c7b986', 1).setDepth(13);
+      const base = this.add.rectangle(x - 92, yy + 15, 184, 4, 0x253029, 0.95).setOrigin(0, 0.5).setDepth(13);
       const ratio = done ? 1 : current / q.target;
-      const fill = this.add.rectangle(x - 82, yy + 14, 164 * ratio, 4, done ? 0x68bd83 : 0xa98c4e, 0.95).setOrigin(0, 0.5).setDepth(14);
+      const fill = this.add.rectangle(x - 92, yy + 15, 184 * ratio, 4, done ? 0x68bd83 : 0xa98c4e, 0.95).setOrigin(0, 0.5).setDepth(14);
       void base; void fill;
     });
 
-    const journal = this.add.rectangle(x, 344, 166, 34, 0x0d1b15, 0.92)
-      .setStrokeStyle(1, GOLD, 0.55)
+    const journal = this.add.rectangle(x, 348, 184, 34, 0x0d1b15, 0.96)
+      .setStrokeStyle(1, GOLD, 0.45)
       .setInteractive({ useHandCursor: true })
       .setDepth(13);
-    const journalText = uiText(this, x, 344, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
+    const journalText = uiText(this, x, 348, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
     const open = () => this.openQuests();
     journal.on('pointerover', () => journal.setFillStyle(0x1b3427, 0.96));
-    journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.92));
+    journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.96));
     journal.on('pointerdown', open);
     journalText.setInteractive({ useHandCursor: true }).on('pointerdown', open);
     void panel; void title;
