@@ -97,7 +97,7 @@ await page.waitForFunction(() => {
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'battle');
 }, null, { timeout: 10_000 });
 
-await page.mouse.click(248, 645);
+await page.mouse.click(160, 645);
 await page.waitForTimeout(1200);
 
 const active = await page.evaluate(() =>
