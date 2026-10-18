@@ -424,7 +424,9 @@ class RegionScene extends Phaser.Scene {
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
 
-      const worldHit = this.add.ellipse(
+      // Invisible, image-aligned hotspot over the illustrated landmark itself.
+      // It has no visible border; the only hover feedback is the painted marker glow.
+      const worldHit = this.add.rectangle(
         spot.worldX,
         spot.worldY,
         spot.worldW,
