@@ -72,6 +72,13 @@ await page.waitForFunction(() => {
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'region');
 }, null, { timeout: 10_000 });
 
+await fs.promises.mkdir('visual-qa', { recursive: true });
+await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
+
+await page.mouse.move(397, 164);
+await page.waitForTimeout(180);
+await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
+
 await page.mouse.click(1038, 540);
 await page.waitForTimeout(250);
 await page.mouse.click(640, 485);
@@ -92,6 +99,7 @@ if (!active.includes('battle')) {
 }
 
 await page.screenshot({ path: 'runtime-smoke.png', fullPage: true });
+await page.screenshot({ path: 'visual-qa/battle.png', fullPage: true });
 
 await browser.close();
 
