@@ -84,12 +84,30 @@ await page.waitForTimeout(180);
 await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
 
-await page.mouse.move(397, 164);
+// The quest rail is collapsed by default so it does not cover the world.
+await page.mouse.click(1238, 220);
+await page.waitForTimeout(280);
+await page.screenshot({ path: 'visual-qa/region-quests-open.png', fullPage: true });
+await page.mouse.click(1018, 220);
+await page.waitForTimeout(240);
+
+// Verify the visible bottom navigation opens the Chronicle.
+await page.mouse.click(890, 681);
+await page.waitForFunction(() => {
+  const game = window.__MAVKA_GAME__;
+  const region = game?.scene?.getScene('region');
+  return Boolean(region?.modal?.active);
+}, null, { timeout: 5_000 });
+await page.screenshot({ path: 'visual-qa/chronicle.png', fullPage: true });
+await page.mouse.click(90, 105);
+await page.waitForTimeout(180);
+
+await page.mouse.move(489, 129);
 await page.waitForTimeout(180);
 await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
 
 // Verify that clicking the illustrated location itself (not only its label) works.
-await page.mouse.click(870, 420);
+await page.mouse.click(1071, 447);
 await page.waitForFunction(() => {
   const game = window.__MAVKA_GAME__;
   const region = game?.scene?.getScene('region');
@@ -100,7 +118,7 @@ await page.mouse.click(955, 165);
 await page.waitForTimeout(180);
 
 // Enter the swamp by clicking its painted artwork area.
-await page.mouse.click(970, 590);
+await page.mouse.click(1194, 608);
 await page.waitForTimeout(350);
 await page.screenshot({ path: 'visual-qa/swamp-modal.png', fullPage: true });
 await page.mouse.click(640, 485);
