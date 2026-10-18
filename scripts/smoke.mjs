@@ -88,7 +88,18 @@ await page.mouse.move(397, 164);
 await page.waitForTimeout(180);
 await page.screenshot({ path: 'visual-qa/region-oak-hover.png', fullPage: true });
 
-await page.mouse.click(1142, 540);
+// Verify that clicking the illustrated location itself (not only its label) works.
+await page.mouse.click(890, 365);
+await page.waitForFunction(() => {
+  const game = window.__MAVKA_GAME__;
+  const region = game?.scene?.getScene('region');
+  return region?.children?.list?.some((child) => child?.type === 'Text' && child?.text === 'Старий Млин');
+}, null, { timeout: 5_000 });
+await page.mouse.click(955, 165);
+await page.waitForTimeout(180);
+
+// Enter the swamp by clicking its painted artwork area.
+await page.mouse.click(980, 555);
 await page.waitForTimeout(350);
 await page.screenshot({ path: 'visual-qa/swamp-modal.png', fullPage: true });
 await page.mouse.click(640, 485);
