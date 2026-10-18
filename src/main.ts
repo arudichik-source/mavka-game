@@ -279,13 +279,20 @@ class RegionScene extends Phaser.Scene {
 
   create() {
     background(this, 'region-bg');
-    this.add.rectangle(W / 2, 29, W, 58, 0x04100c, 0.62).setDepth(10);
 
-    this.profileText = uiText(this, 24, 28, '', 16, '#f5e8c5').setDepth(11);
-    this.resourceText = uiText(this, W - 24, 28, '', 16, '#f4dda1', 1).setDepth(11);
-    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(30).setAlpha(0);
+    // The illustration contains concept HUD artwork. Cover its baked counters and
+    // render the real game state on top so the player never sees two sets of values.
+    this.add.rectangle(W / 2, 30, W, 60, 0x030806, 0.9)
+      .setStrokeStyle(1, GOLD, 0.34)
+      .setDepth(10);
+    gameText(this, W / 2, 28, 'СЕРЦЕ ПУЩІ', 20, '#ead18f', 0.5).setDepth(11);
+
+    this.profileText = uiText(this, 22, 29, '', 15, '#f5e8c5').setDepth(11);
+    this.resourceText = uiText(this, W - 22, 29, '', 15, '#f4dda1', 1).setDepth(11);
+    this.toastText = uiText(this, W / 2, 82, '', 16, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
+    this.drawQuestRail();
     this.makeLandmarks();
     this.makeNav();
     this.refreshHud();
@@ -301,6 +308,49 @@ class RegionScene extends Phaser.Scene {
   private refreshHud() {
     this.profileText.setText(`Мавка • рівень ${state.level}     ❤ ${state.hp}/${state.maxHp}     ✦ ${state.mana}/${state.maxMana}`);
     this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
+  }
+
+  private drawQuestRail() {
+    const x = 1158;
+    const y = 290;
+    const w = 228;
+    const h = 388;
+    this.add.rectangle(x + 4, y + 5, w, h, 0x000000, 0.38).setDepth(11);
+    this.add.rectangle(x, y, w, h, PANEL, 0.91)
+      .setStrokeStyle(2, GOLD, 0.65)
+      .setDepth(12);
+
+    uiText(this, x - 94, 118, 'Завдання регіону', 17, '#f0d18a').setDepth(13);
+    const rows: Array<{ id: QuestId; title: string; target: number }> = [
+      { id: 'oak', title: 'Голос Старого Дуба', target: 3 },
+      { id: 'hunter', title: 'Стежками мисливця', target: 5 },
+      { id: 'mill', title: 'Чисті джерела', target: 1 }
+    ];
+    rows.forEach((q, i) => {
+      const yy = 165 + i * 86;
+      const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
+      const done = state.claimedQuests.includes(q.id);
+      this.add.rectangle(x, yy, 204, 72, done ? 0x123522 : 0x0d1915, 0.9)
+        .setStrokeStyle(1, done ? 0x6fc78c : 0x806b3a, 0.58)
+        .setDepth(13);
+      uiText(this, x - 88, yy - 18, q.title, 14, done ? '#9ee3ad' : '#ead497').setDepth(14);
+      uiText(this, x - 88, yy + 10, done ? 'Виконано' : `${current}/${q.target}`, 13, done ? '#8fe0a5' : '#c9bea3').setDepth(14);
+      if (!done) {
+        const ratio = q.target ? current / q.target : 0;
+        this.add.rectangle(x - 88, yy + 27, 174, 5, 0x263029, 1).setOrigin(0, 0.5).setDepth(14);
+        this.add.rectangle(x - 88, yy + 27, 174 * ratio, 5, 0x62c98a, 1).setOrigin(0, 0.5).setDepth(15);
+      }
+    });
+
+    const open = this.add.rectangle(x, 446, 202, 44, 0x10231b, 0.94)
+      .setStrokeStyle(1, GOLD, 0.72)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(13);
+    const label = uiText(this, x, 446, 'Відкрити журнал', 14, '#f4dda1', 0.5).setDepth(14);
+    open.on('pointerover', () => open.setFillStyle(GREEN, 0.18));
+    open.on('pointerout', () => open.setFillStyle(0x10231b, 0.94));
+    open.on('pointerdown', () => this.openQuests());
+    label.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openQuests());
   }
 
   private addRegionAtmosphere() {
@@ -333,29 +383,30 @@ class RegionScene extends Phaser.Scene {
       ).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0)
         .setDepth(7);
 
+      const tooltipX = Phaser.Math.Clamp(spot.markerX, 165, W - 165);
+      const tooltipY = Math.max(92, spot.markerY - spot.markerSize * 0.95);
       const tooltipBg = this.add.rectangle(
-        spot.markerX,
-        spot.markerY - spot.markerSize * 0.95,
-        Math.min(300, Math.max(170, spot.name.length * 10 + 40)),
+        tooltipX,
+        tooltipY,
+        Math.min(310, Math.max(180, spot.name.length * 10 + 55)),
         48,
         0x06100c,
-        0.94
+        0.96
       ).setStrokeStyle(1, GOLD, 0.75).setDepth(31).setAlpha(0);
       const tooltip = uiText(
         this,
-        spot.markerX,
-        spot.markerY - spot.markerSize * 0.95,
+        tooltipX,
+        tooltipY,
         `${spot.name} • ${spot.subtitle}`,
         13,
         '#f7e7bb',
         0.5
       ).setDepth(32).setAlpha(0);
 
-      const markerHit = this.add.rectangle(
+      const markerHit = this.add.circle(
         spot.markerX,
         spot.markerY,
-        spot.markerSize,
-        spot.markerSize,
+        spot.markerSize * 0.52,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(8);
@@ -387,7 +438,17 @@ class RegionScene extends Phaser.Scene {
           tooltip.setAlpha(0);
         });
       };
-      const activate = () => this.openLandmark(spot);
+      const activate = () => {
+        glow.setAlpha(0.26).setScale(0.96);
+        this.tweens.add({
+          targets: glow,
+          scale: 1.28,
+          alpha: 0,
+          duration: 260,
+          ease: 'Cubic.out'
+        });
+        this.time.delayedCall(90, () => this.openLandmark(spot));
+      };
 
       [markerHit, labelHit].forEach((hit) => {
         hit.on('pointerover', showHover);
@@ -398,18 +459,18 @@ class RegionScene extends Phaser.Scene {
   }
 
   private makeNav() {
+    // Hit areas follow the four painted navigation buttons in the artwork.
     const items = [
-      { x: 120, label: 'Карта', action: () => this.closeModal() },
-      { x: 350, label: 'Завдання', action: () => this.openQuests() },
-      { x: 580, label: 'Рюкзак', action: () => this.openInventory() },
-      { x: 810, label: 'Літопис', action: () => this.openChronicle() },
-      { x: 1040, label: 'Табір', action: () => this.openCamp() }
+      { x: 190, w: 270, action: () => this.closeModal() },
+      { x: 500, w: 270, action: () => this.openQuests() },
+      { x: 820, w: 270, action: () => this.openInventory() },
+      { x: 1135, w: 240, action: () => this.openCamp() }
     ];
     items.forEach((item) => {
-      const hit = this.add.rectangle(item.x, 675, 200, 64, 0xf0d18c, 0.001)
+      const hit = this.add.rectangle(item.x, 675, item.w, 68, 0xf0d18c, 0.001)
         .setInteractive({ useHandCursor: true }).setDepth(20);
-      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.08));
-      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001));
+      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.07).setStrokeStyle(1, 0xf0d18c, 0.45));
+      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0));
       hit.on('pointerdown', item.action);
     });
   }
@@ -813,6 +874,7 @@ class RegionScene extends Phaser.Scene {
       this.toast('Прогрес збережено.');
     }, 0x65b883);
     this.addModalButton(c, 775, 435, 'Головне меню', () => this.scene.start('title'), 0xa77a49);
+    this.addModalButton(c, W / 2, 505, 'Літопис Пущі', () => this.openChronicle(), CYAN);
   }
 
   private toast(message: string) {
