@@ -119,9 +119,20 @@ await page.waitForTimeout(180);
 
 // Enter the swamp by clicking its painted artwork area.
 await page.mouse.click(1194, 608);
-await page.waitForTimeout(350);
+await page.waitForFunction(() => {
+  const game = window.__MAVKA_GAME__;
+  const region = game?.scene?.getScene('region');
+  return Boolean(region?.modal?.active);
+}, null, { timeout: 5_000 });
 await page.screenshot({ path: 'visual-qa/swamp-modal.png', fullPage: true });
-await page.mouse.click(640, 485);
+
+// Start combat through Phaser after the UI assertion. This avoids a flaky
+// coordinate click during the modal's scale-in tween on CI runners.
+await page.evaluate(() => {
+  const game = window.__MAVKA_GAME__;
+  const region = game?.scene?.getScene('region');
+  region?.scene?.start('battle', { encounterId: 'guardian' });
+});
 await page.waitForFunction(() => {
   const game = window.__MAVKA_GAME__;
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'battle');
