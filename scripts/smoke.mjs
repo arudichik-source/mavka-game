@@ -72,7 +72,7 @@ await page.waitForFunction(() => {
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'region');
 }, null, { timeout: 10_000 });
 
-await page.mouse.click(1010, 505);
+await page.mouse.click(1038, 540);
 await page.waitForTimeout(250);
 await page.mouse.click(640, 485);
 await page.waitForFunction(() => {
