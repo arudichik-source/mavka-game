@@ -26,6 +26,13 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
+await page.addInitScript(() => {
+  localStorage.setItem('mavka-game-save-v2', JSON.stringify({
+    version: 2,
+    seenIntro: true
+  }));
+});
+
 const runtimeErrors = [];
 page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
 page.on('console', (message) => {
@@ -72,9 +79,6 @@ await page.waitForFunction(() => {
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'region');
 }, null, { timeout: 10_000 });
 
-// A fresh browser profile opens the Chapter I intro. Dismiss it exactly as a player would.
-await page.waitForTimeout(500);
-await page.mouse.click(640, 455);
 await page.waitForTimeout(180);
 
 await fs.promises.mkdir('visual-qa', { recursive: true });
