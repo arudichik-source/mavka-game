@@ -96,6 +96,11 @@ await page.waitForFunction(() => {
 await page.waitForTimeout(180);
 
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
+await page.mouse.move(890, 674);
+await page.waitForTimeout(180);
+await page.screenshot({ path: 'visual-qa/region-nav-hover.png', fullPage: true });
+await page.mouse.move(640, 360);
+await page.waitForTimeout(80);
 await page.mouse.move(397, 164);
 await page.waitForTimeout(240);
 await page.screenshot({ path: 'visual-qa/region-marker-hover.png', fullPage: true });
