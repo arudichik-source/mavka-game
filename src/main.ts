@@ -97,10 +97,25 @@ function uiText(
 }
 
 function ornatePanel(scene: Phaser.Scene, x: number, y: number, w: number, h: number, alpha = 0.96) {
-  const shadow = scene.add.rectangle(x + 6, y + 8, w, h, 0x000000, 0.48);
-  const outer = scene.add.rectangle(x, y, w, h, PANEL, alpha).setStrokeStyle(2, GOLD, 0.92);
-  const inner = scene.add.rectangle(x, y, w - 12, h - 12, 0x101c17, 0.25).setStrokeStyle(1, 0xf0d28a, 0.24);
-  return [shadow, outer, inner];
+  const shadow = scene.add.rectangle(x + 7, y + 9, w, h, 0x000000, 0.5);
+  const outer = scene.add.rectangle(x, y, w, h, PANEL, alpha).setStrokeStyle(2, GOLD, 0.9);
+  const inner = scene.add.rectangle(x, y, w - 14, h - 14, 0x101c17, 0.22).setStrokeStyle(1, 0xf0d28a, 0.22);
+
+  const topLine = scene.add.rectangle(x, y - h / 2 + 17, Math.min(w - 90, 260), 1, GOLD, 0.34);
+  const bottomLine = scene.add.rectangle(x, y + h / 2 - 17, Math.min(w - 120, 220), 1, GOLD, 0.2);
+  const cornerSize = 10;
+  const corners = [
+    [x - w / 2 + 18, y - h / 2 + 18],
+    [x + w / 2 - 18, y - h / 2 + 18],
+    [x - w / 2 + 18, y + h / 2 - 18],
+    [x + w / 2 - 18, y + h / 2 - 18]
+  ].map(([cx, cy]) =>
+    scene.add.rectangle(cx, cy, cornerSize, cornerSize, 0x10231b, 0.9)
+      .setStrokeStyle(1, GOLD, 0.7)
+      .setAngle(45)
+  );
+
+  return [shadow, outer, inner, topLine, bottomLine, ...corners];
 }
 
 function button(
@@ -200,12 +215,50 @@ class TitleScene extends Phaser.Scene {
   }
 
   create() {
-    background(this, 'region-bg');
-    this.add.rectangle(W / 2, H / 2, W, H, 0x020806, 0.48);
-    this.add.rectangle(250, H / 2, 500, H, 0x020806, 0.7);
+    const bg = background(this, 'region-bg').setScale(1.025);
+    this.tweens.add({
+      targets: bg,
+      scale: 1.045,
+      duration: 9000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut'
+    });
+
+    this.add.rectangle(W / 2, H / 2, W, H, 0x020806, 0.46);
+    this.add.rectangle(250, H / 2, 500, H, 0x020806, 0.74);
+
+    const runeGlow = this.add.circle(392, 168, 74, 0x5ec985, 0.045)
+      .setStrokeStyle(2, GOLD, 0.22);
+    const runeDiamond = this.add.rectangle(392, 168, 88, 88, 0x000000, 0.001)
+      .setStrokeStyle(1, GOLD, 0.34)
+      .setAngle(45);
+    const runeCore = this.add.circle(392, 168, 19, 0x163a27, 0.42)
+      .setStrokeStyle(2, 0x73c992, 0.48);
+    this.tweens.add({ targets: runeGlow, alpha: { from: 0.025, to: 0.09 }, scale: { from: 0.94, to: 1.08 }, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.tweens.add({ targets: runeDiamond, angle: 405, duration: 28000, repeat: -1, ease: 'Linear' });
+    this.tweens.add({ targets: runeCore, scale: { from: 0.9, to: 1.08 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+
+    for (let i = 0; i < 14; i++) {
+      const x = Phaser.Math.Between(45, 470);
+      const y = Phaser.Math.Between(80, 610);
+      const mote = this.add.circle(x, y, Phaser.Math.Between(1, 2), i % 4 === 0 ? 0xe9c96e : 0x83d9a1, 0.12)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: mote,
+        x: x + Phaser.Math.Between(-16, 22),
+        y: y - Phaser.Math.Between(16, 48),
+        alpha: { from: 0.04, to: 0.34 },
+        duration: Phaser.Math.Between(2600, 5200),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    }
 
     gameText(this, 70, 150, 'МАВКА', 72, '#f0d28d');
     gameText(this, 74, 210, 'ЛЕГЕНДИ ПУЩІ', 25, '#d8c6a0');
+    this.add.rectangle(215, 236, 280, 1, GOLD, 0.35);
     uiText(this, 75, 260, '2D RPG • жива Пуща • тактичні бої', 16, '#c8d8cd');
 
     button(this, 200, 360, 270, 56, 'Продовжити', () => this.scene.start('region'), 0x73c992);
@@ -218,7 +271,8 @@ class TitleScene extends Phaser.Scene {
     uiText(this, 74, 585, progress, 14, state.chapterComplete ? '#9fe2ae' : '#cbbd9c');
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
-    uiText(this, 74, 670, 'Web • Telegram-ready architecture • Android-ready', 13, '#7d9187');
+    uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
+    uiText(this, 470, 690, 'v0.6.8', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
@@ -584,22 +638,38 @@ class RegionScene extends Phaser.Scene {
     });
   }
   private makeNav() {
-    // Hit areas follow the four painted navigation buttons in the artwork.
+    // Preserve the painted bottom navigation, but redraw only its text so labels
+    // remain sharp at browser scale.
     const items = [
-      { x: 190, w: 270, action: () => this.closeModal() },
-      { x: 500, w: 270, action: () => this.openQuests() },
-      { x: 820, w: 270, action: () => this.openInventory() },
-      { x: 1135, w: 240, action: () => this.openCamp() }
+      { x: 190, w: 270, label: 'Карта', action: () => this.closeModal() },
+      { x: 500, w: 270, label: 'Завдання', action: () => this.openQuests() },
+      { x: 820, w: 270, label: 'Рюкзак', action: () => this.openInventory() },
+      { x: 1135, w: 240, label: 'Табір', action: () => this.openCamp() }
     ];
     items.forEach((item) => {
+      const labelBg = this.add.rectangle(item.x, 663, Math.min(146, item.w - 32), 28, 0x04100c, 0.5)
+        .setDepth(19);
+      const label = uiText(this, item.x, 663, item.label, 14, '#eadcb8', 0.5).setDepth(20);
       const hit = this.add.rectangle(item.x, 675, item.w, 68, 0xf0d18c, 0.001)
-        .setInteractive({ useHandCursor: true }).setDepth(20);
-      hit.on('pointerover', () => hit.setFillStyle(0xe9c770, 0.07).setStrokeStyle(1, 0xf0d18c, 0.45));
-      hit.on('pointerout', () => hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0));
+        .setInteractive({ useHandCursor: true }).setDepth(21);
+
+      const hoverOn = () => {
+        hit.setFillStyle(0xe9c770, 0.05).setStrokeStyle(1, 0xf0d18c, 0.3);
+        labelBg.setFillStyle(0x10231b, 0.72);
+        label.setColor('#fff0c8');
+      };
+      const hoverOff = () => {
+        hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0);
+        labelBg.setFillStyle(0x04100c, 0.5);
+        label.setColor('#eadcb8');
+      };
+
+      hit.on('pointerover', hoverOn);
+      hit.on('pointerout', hoverOff);
       hit.on('pointerdown', item.action);
+      label.setInteractive({ useHandCursor: true }).on('pointerdown', item.action);
     });
   }
-
   private openLandmark(spot: Landmark) {
     visit(state, spot.id);
     saveState(state);
