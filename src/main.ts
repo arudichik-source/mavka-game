@@ -1330,12 +1330,12 @@ class BattleScene extends Phaser.Scene {
       const hoverOn = () => {
         hit.setFillStyle(SKILLS[i].color, 0.16).setStrokeStyle(2, SKILLS[i].color, 1).setScale(1.018);
         inner.setFillStyle(SKILLS[i].color, 0.06);
-        glyphs.forEach((g) => this.tweens.add({ targets: g, scale: 1.08, duration: 110, ease: 'Sine.out' }));
+        glyphs.forEach((g) => this.tweens.add({ targets: g, scaleX: 1.08, scaleY: 1.08, duration: 110, ease: 'Sine.out' }));
       };
       const hoverOff = () => {
         hit.setFillStyle(0x0b1511, 0.97).setStrokeStyle(2, SKILLS[i].color, 0.68).setScale(1);
         inner.setFillStyle(0x0e1b16, 0.32);
-        glyphs.forEach((g) => g.setScale(1));
+        glyphs.forEach((g) => this.tweens.add({ targets: g, scaleX: 1, scaleY: 1, duration: 90, ease: 'Sine.out' }));
       };
 
       hit.on('pointerover', hoverOn);
