@@ -73,6 +73,12 @@ const assetsReady = await page.evaluate(() => {
 });
 if (!assetsReady) throw new Error('Visual atlas frames did not initialize');
 
+await fs.promises.mkdir('visual-qa', { recursive: true });
+await page.screenshot({ path: 'visual-qa/title.png', fullPage: true });
+await page.mouse.move(200, 360);
+await page.waitForTimeout(160);
+await page.screenshot({ path: 'visual-qa/title-hover.png', fullPage: true });
+
 await page.mouse.click(200, 360);
 await page.waitForFunction(() => {
   const game = window.__MAVKA_GAME__;
@@ -81,7 +87,6 @@ await page.waitForFunction(() => {
 
 await page.waitForTimeout(180);
 
-await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
 await page.mouse.move(397, 164);
 await page.waitForTimeout(240);
