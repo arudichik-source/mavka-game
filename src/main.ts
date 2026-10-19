@@ -23,6 +23,9 @@ const PANEL = 0x08110f;
 const GREEN = 0x62c98a;
 const CYAN = 0x61d1dc;
 const RED = 0xc84f45;
+const ART_SCALE = 1.5;
+const ART_W = Math.round(W * ART_SCALE);
+const ART_H = Math.round(H * ART_SCALE);
 
 let state: GameState = loadState();
 
@@ -143,38 +146,45 @@ class BootScene extends Phaser.Scene {
     const source = this.textures.get('visual-atlas').getSourceImage() as HTMLImageElement;
     const makeFrame = (key: string, sy: number) => {
       const canvas = document.createElement('canvas');
-      canvas.width = W;
-      canvas.height = H;
+      canvas.width = ART_W;
+      canvas.height = ART_H;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) throw new Error('Canvas 2D unavailable');
 
-      // The source atlas is intentionally compact for fast delivery. Upscale once
-      // with high-quality filtering and a light unsharp pass, then render 1:1.
+      // Supersample the compact concept art, then use restrained edge-aware
+      // micro-contrast. This avoids the smeared look without creating blocky pixels.
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.filter = 'contrast(1.06) saturate(1.05)';
-      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, W, H);
+      ctx.filter = 'contrast(1.075) saturate(1.035) brightness(1.015)';
+      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, ART_W, ART_H);
       ctx.filter = 'none';
 
-      const image = ctx.getImageData(0, 0, W, H);
+      ctx.save();
+      ctx.globalAlpha = 0.045;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, ART_W, ART_H);
+      ctx.restore();
+
+      const image = ctx.getImageData(0, 0, ART_W, ART_H);
       const src = image.data;
-      const sharpened = new Uint8ClampedArray(src);
-      const strength = 0.18;
-      for (let y = 1; y < H - 1; y++) {
-        for (let x = 1; x < W - 1; x++) {
-          const i = (y * W + x) * 4;
+      const out = new Uint8ClampedArray(src);
+      for (let y = 1; y < ART_H - 1; y++) {
+        for (let x = 1; x < ART_W - 1; x++) {
+          const i = (y * ART_W + x) * 4;
           const left = i - 4;
           const right = i + 4;
-          const up = i - W * 4;
-          const down = i + W * 4;
+          const up = i - ART_W * 4;
+          const down = i + ART_W * 4;
           for (let channel = 0; channel < 3; channel++) {
-            const neighborAvg = (src[left + channel] + src[right + channel] + src[up + channel] + src[down + channel]) / 4;
-            const value = src[i + channel] * (1 + strength) - neighborAvg * strength;
-            sharpened[i + channel] = Phaser.Math.Clamp(Math.round(value), 0, 255);
+            const center = src[i + channel];
+            const avg = (src[left + channel] + src[right + channel] + src[up + channel] + src[down + channel]) * 0.25;
+            const diff = center - avg;
+            const boost = Phaser.Math.Clamp(diff * (Math.abs(diff) > 6 ? 0.28 : 0.12), -16, 16);
+            out[i + channel] = Phaser.Math.Clamp(Math.round(center + boost), 0, 255);
           }
         }
       }
-      image.data.set(sharpened);
+      image.data.set(out);
       ctx.putImageData(image, 0, 0);
       this.textures.addCanvas(key, canvas);
     };
@@ -296,6 +306,7 @@ class RegionScene extends Phaser.Scene {
     this.toastText = uiText(this, W / 2, 72, '', 15, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
+    this.addForegroundFoliage();
     this.drawQuestRail();
     this.makeLandmarks();
     this.makeNav();
@@ -434,36 +445,74 @@ class RegionScene extends Phaser.Scene {
     }
   }
 
-  private makeLandmarks() {
-    LANDMARKS.forEach((spot) => {
-      const glow = this.add.circle(
-        spot.markerX,
-        spot.markerY,
-        spot.markerSize * 0.62,
-        spot.id === 'swamp' ? 0x63d991 : 0xf0cf78,
-        0
-      ).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0)
-        .setDepth(7);
+  private addForegroundFoliage() {
+    const leaves = [
+      { x: 24, y: 145, w: 96, h: 24, angle: -32, alpha: 0.15 },
+      { x: 42, y: 210, w: 118, h: 28, angle: 18, alpha: 0.12 },
+      { x: 70, y: 625, w: 132, h: 30, angle: -16, alpha: 0.12 },
+      { x: 1015, y: 76, w: 120, h: 24, angle: 20, alpha: 0.09 },
+      { x: 1005, y: 620, w: 136, h: 30, angle: 14, alpha: 0.1 }
+    ];
 
-      const tooltipX = Phaser.Math.Clamp(spot.markerX, 165, W - 165);
-      const tooltipY = Math.max(92, spot.markerY - spot.markerSize * 0.95);
-      const tooltipBg = this.add.rectangle(
-        tooltipX,
-        tooltipY,
-        Math.min(310, Math.max(180, spot.name.length * 10 + 55)),
-        48,
-        0x06100c,
-        0.96
-      ).setStrokeStyle(1, GOLD, 0.75).setDepth(31).setAlpha(0);
-      const tooltip = uiText(
+    leaves.forEach((leaf, i) => {
+      const shape = this.add.ellipse(leaf.x, leaf.y, leaf.w, leaf.h, i % 2 ? 0x173824 : 0x0c2417, leaf.alpha)
+        .setAngle(leaf.angle)
+        .setDepth(5);
+      this.tweens.add({
+        targets: shape,
+        angle: leaf.angle + (i % 2 ? 4 : -4),
+        x: leaf.x + (i % 2 ? 5 : -5),
+        duration: 3600 + i * 480,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    });
+  }
+
+  private makeLandmarks() {
+    const accentFor = (id: string) => {
+      if (id === 'settlement') return 0x6ccf91;
+      if (id === 'oak') return 0xe0bb63;
+      if (id === 'shrine') return 0x62d6ba;
+      if (id === 'hunter') return 0xd1a961;
+      if (id === 'yarin') return 0xd8c382;
+      if (id === 'mill') return 0xe0b45b;
+      return 0x66d8b6;
+    };
+
+    LANDMARKS.forEach((spot) => {
+      const accent = accentFor(spot.id);
+
+      // Sharpen only the original marker/nameplate footprint, never the whole scene.
+      const marker = this.add.rectangle(spot.markerX, spot.markerY, 31, 31, 0x07110d, 0.92)
+        .setAngle(45)
+        .setStrokeStyle(2, accent, 0.88)
+        .setDepth(7);
+      const markerCore = this.add.circle(spot.markerX, spot.markerY, 5, accent, 0.92).setDepth(8);
+      const markerHalo = this.add.circle(spot.markerX, spot.markerY, 25, accent, 0)
+        .setStrokeStyle(2, accent, 0)
+        .setDepth(6);
+
+      const plate = this.add.rectangle(spot.labelX, spot.labelY, spot.labelW, spot.labelH, 0x06100c, 0.86)
+        .setStrokeStyle(1, accent, 0.38)
+        .setDepth(7);
+      const name = uiText(
         this,
-        tooltipX,
-        tooltipY,
-        `${spot.name} • ${spot.subtitle}`,
+        spot.labelX - spot.labelW / 2 + 11,
+        spot.labelY - 9,
+        spot.name,
         13,
-        '#f7e7bb',
-        0.5
-      ).setDepth(32).setAlpha(0);
+        '#f3e4bd'
+      ).setDepth(8);
+      const subtitle = uiText(
+        this,
+        spot.labelX - spot.labelW / 2 + 11,
+        spot.labelY + 10,
+        spot.subtitle,
+        9,
+        '#9eada1'
+      ).setDepth(8);
 
       const markerHit = this.add.circle(
         spot.markerX,
@@ -471,7 +520,7 @@ class RegionScene extends Phaser.Scene {
         spot.markerSize * 0.52,
         0xffffff,
         0.001
-      ).setInteractive({ useHandCursor: true }).setDepth(8);
+      ).setInteractive({ useHandCursor: true }).setDepth(9);
 
       const labelHit = this.add.rectangle(
         spot.labelX,
@@ -480,10 +529,8 @@ class RegionScene extends Phaser.Scene {
         spot.labelH,
         0xffffff,
         0.001
-      ).setInteractive({ useHandCursor: true }).setDepth(8);
+      ).setInteractive({ useHandCursor: true }).setDepth(9);
 
-      // Invisible, image-aligned hotspot over the illustrated landmark itself.
-      // It has no visible border; the only hover feedback is the painted marker glow.
       const worldHit = this.add.rectangle(
         spot.worldX,
         spot.worldY,
@@ -496,28 +543,32 @@ class RegionScene extends Phaser.Scene {
       let hoverDepth = 0;
       const showHover = () => {
         hoverDepth += 1;
-        glow.setAlpha(0.18).setStrokeStyle(3, spot.id === 'swamp' ? 0x7cf0a2 : 0xffdf8d, 0.95);
-        tooltipBg.setAlpha(1);
-        tooltip.setAlpha(1);
-        this.tweens.killTweensOf(glow);
-        this.tweens.add({ targets: glow, scale: 1.18, duration: 220, ease: 'Sine.out' });
+        plate.setFillStyle(0x0b1b14, 0.94).setStrokeStyle(1, accent, 0.86);
+        name.setColor('#fff0c8');
+        marker.setFillStyle(0x10271c, 0.96).setStrokeStyle(2, accent, 1);
+        markerCore.setScale(1.18);
+        markerHalo.setAlpha(0.24).setStrokeStyle(2, accent, 0.7);
+        this.tweens.killTweensOf(markerHalo);
+        this.tweens.add({ targets: markerHalo, scale: 1.35, alpha: 0.06, duration: 520, yoyo: true, repeat: -1 });
       };
       const hideHover = () => {
         hoverDepth = Math.max(0, hoverDepth - 1);
         this.time.delayedCall(25, () => {
           if (hoverDepth !== 0) return;
-          glow.setAlpha(0).setStrokeStyle(3, 0xffffff, 0).setScale(1);
-          tooltipBg.setAlpha(0);
-          tooltip.setAlpha(0);
+          plate.setFillStyle(0x06100c, 0.86).setStrokeStyle(1, accent, 0.38);
+          name.setColor('#f3e4bd');
+          marker.setFillStyle(0x07110d, 0.92).setStrokeStyle(2, accent, 0.88);
+          markerCore.setScale(1);
+          this.tweens.killTweensOf(markerHalo);
+          markerHalo.setAlpha(0).setScale(1).setStrokeStyle(2, accent, 0);
         });
       };
       const activate = () => {
-        glow.setAlpha(0.26).setScale(0.96);
         this.tweens.add({
-          targets: glow,
-          scale: 1.28,
-          alpha: 0,
-          duration: 260,
+          targets: [marker, markerCore],
+          scale: 1.12,
+          duration: 90,
+          yoyo: true,
           ease: 'Cubic.out'
         });
         this.time.delayedCall(90, () => this.openLandmark(spot));
@@ -528,9 +579,10 @@ class RegionScene extends Phaser.Scene {
         hit.on('pointerout', hideHover);
         hit.on('pointerdown', activate);
       });
+
+      void subtitle;
     });
   }
-
   private makeNav() {
     // Hit areas follow the four painted navigation buttons in the artwork.
     const items = [
@@ -1510,6 +1562,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: W,
   height: H,
   backgroundColor: '#040a07',
+  resolution: Math.min(Math.max(window.devicePixelRatio || 1, 1.25), 1.75),
   render: {
     antialias: true,
     pixelArt: false,
