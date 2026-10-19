@@ -83,6 +83,9 @@ await page.waitForTimeout(180);
 
 await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
+await page.mouse.move(397, 164);
+await page.waitForTimeout(240);
+await page.screenshot({ path: 'visual-qa/region-marker-hover.png', fullPage: true });
 
 // Capture hover feedback on the real Old Oak marker without drawing extra cards.
 await page.mouse.move(397, 164);
