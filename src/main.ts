@@ -227,7 +227,7 @@ class TitleScene extends Phaser.Scene {
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
-    uiText(this, 470, 690, 'v0.6.9 • HD ART', 11, '#61746b', 1);
+    uiText(this, 470, 690, 'v0.7.0 • LIVING MAP', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
@@ -305,9 +305,11 @@ class RegionScene extends Phaser.Scene {
 
     // Keep the concept art visible. Only a slim translucent status strip is drawn
     // over the baked top counters instead of replacing the whole composition.
-    this.add.rectangle(W / 2, 25, W, 50, 0x020806, 0.78)
-      .setStrokeStyle(1, GOLD, 0.24)
+    this.add.rectangle(W / 2, 25, W, 50, 0x020806, 0.9)
+      .setStrokeStyle(1, GOLD, 0.3)
       .setDepth(10);
+    this.add.rectangle(350, 25, 1, 30, GOLD, 0.18).setDepth(11);
+    this.add.rectangle(930, 25, 1, 30, GOLD, 0.18).setDepth(11);
     gameText(this, W / 2, 25, 'СЕРЦЕ ПУЩІ', 18, '#ead18f', 0.5).setDepth(11);
 
     this.profileText = uiText(this, 20, 25, '', 14, '#f5e8c5').setDepth(11);
@@ -315,6 +317,7 @@ class RegionScene extends Phaser.Scene {
     this.toastText = uiText(this, W / 2, 72, '', 15, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
+    this.addLandmarkLife();
     this.addForegroundFoliage();
     this.drawQuestRail();
     this.makeLandmarks();
@@ -336,46 +339,55 @@ class RegionScene extends Phaser.Scene {
   }
 
   private drawQuestRail() {
-    // Cover the baked mock quest panel completely, but keep the replacement quiet
-    // and within the exact same footprint so it does not steal more world space.
+    // Rebuild only the baked quest-panel footprint so the world remains dominant.
     const x = 1156;
-    const y = 248;
+    const y = 246;
     const w = 226;
-    const h = 350;
-    const panel = this.add.rectangle(x, y, w, h, 0x04100c, 0.97)
-      .setStrokeStyle(1, GOLD, 0.38)
+    const h = 380;
+    const panel = this.add.rectangle(x, y, w, h, 0x04100c, 0.955)
+      .setStrokeStyle(1, GOLD, 0.5)
       .setDepth(12);
-    const title = uiText(this, x - 92, 92, 'Завдання регіону', 14, '#ead18f').setDepth(13);
+    this.add.rectangle(x, 76, 194, 30, 0x07150f, 0.96).setDepth(13);
+    this.add.rectangle(x, 92, 194, 1, GOLD, 0.32).setDepth(14);
+    uiText(this, x - 92, 76, 'ЗАВДАННЯ РЕГІОНУ', 12, '#d9c184').setDepth(14);
 
-    const rows: Array<{ id: QuestId; title: string; target: number }> = [
-      { id: 'oak', title: 'Старий Дуб', target: 3 },
-      { id: 'hunter', title: 'Стежка Мисливця', target: 4 },
-      { id: 'mill', title: 'Старий Млин', target: 1 }
+    const rows: Array<{ id: QuestId; title: string; target: number; accent: number }> = [
+      { id: 'oak', title: 'Старий Дуб', target: 3, accent: 0xd0aa58 },
+      { id: 'hunter', title: 'Стежка Мисливця', target: 4, accent: 0x77b47d },
+      { id: 'mill', title: 'Старий Млин', target: 1, accent: 0xd48d4d }
     ];
 
     rows.forEach((q, i) => {
-      const yy = 142 + i * 74;
+      const yy = 138 + i * 76;
       const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
       const done = state.claimedQuests.includes(q.id);
-      uiText(this, x - 92, yy - 8, q.title, 13, done ? '#8edaa2' : '#ddd0ad').setDepth(13);
-      uiText(this, x + 92, yy - 8, done ? '✓' : `${current}/${q.target}`, 12, done ? '#8edaa2' : '#c7b986', 1).setDepth(13);
-      const base = this.add.rectangle(x - 92, yy + 15, 184, 4, 0x253029, 0.95).setOrigin(0, 0.5).setDepth(13);
+      const row = this.add.rectangle(x, yy, 194, 56, 0x0a1712, 0.54)
+        .setStrokeStyle(1, done ? 0x6fbe86 : q.accent, done ? 0.62 : 0.24)
+        .setDepth(13);
+      const gem = this.add.rectangle(x - 80, yy - 8, 13, 13, 0x09140f, 0.95)
+        .setAngle(45)
+        .setStrokeStyle(1, done ? 0x73cf8d : q.accent, 0.8)
+        .setDepth(14);
+      this.add.circle(x - 80, yy - 8, 2.5, done ? 0x73cf8d : q.accent, 0.95).setDepth(15);
+      uiText(this, x - 61, yy - 12, q.title, 12, done ? '#94dda7' : '#ded2b6').setDepth(14);
+      uiText(this, x + 80, yy - 12, done ? '✓' : `${current}/${q.target}`, 11, done ? '#8edaa2' : '#baa975', 1).setDepth(14);
+      const base = this.add.rectangle(x - 61, yy + 12, 142, 3, 0x26332c, 0.9).setOrigin(0, 0.5).setDepth(14);
       const ratio = done ? 1 : current / q.target;
-      const fill = this.add.rectangle(x - 92, yy + 15, 184 * ratio, 4, done ? 0x68bd83 : 0xa98c4e, 0.95).setOrigin(0, 0.5).setDepth(14);
-      void base; void fill;
+      const fill = this.add.rectangle(x - 61, yy + 12, 142 * ratio, 3, done ? 0x68bd83 : q.accent, 0.9).setOrigin(0, 0.5).setDepth(15);
+      void row; void gem; void base; void fill;
     });
 
-    const journal = this.add.rectangle(x, 348, 184, 34, 0x0d1b15, 0.96)
-      .setStrokeStyle(1, GOLD, 0.45)
+    const journal = this.add.rectangle(x, 360, 184, 34, 0x0d1b15, 0.94)
+      .setStrokeStyle(1, GOLD, 0.42)
       .setInteractive({ useHandCursor: true })
       .setDepth(13);
-    const journalText = uiText(this, x, 348, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
+    const journalText = uiText(this, x, 360, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
     const open = () => this.openQuests();
-    journal.on('pointerover', () => journal.setFillStyle(0x1b3427, 0.96));
-    journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.96));
+    journal.on('pointerover', () => journal.setFillStyle(0x1b3427, 0.98).setStrokeStyle(1, GOLD, 0.8));
+    journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.94).setStrokeStyle(1, GOLD, 0.42));
     journal.on('pointerdown', open);
     journalText.setInteractive({ useHandCursor: true }).on('pointerdown', open);
-    void panel; void title;
+    void panel;
   }
 
   private addRegionAtmosphere() {
@@ -447,6 +459,74 @@ class RegionScene extends Phaser.Scene {
         y: y - Phaser.Math.Between(12, 38),
         alpha: { from: 0.06, to: 0.46 },
         duration: Phaser.Math.Between(2200, 5200),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut'
+      });
+    }
+  }
+
+  private addLandmarkLife() {
+    // Settlement chimney smoke.
+    for (let i = 0; i < 4; i++) {
+      const smoke = this.add.circle(255 + i * 4, 264 - i * 7, 5 + i * 2, 0xd6dfd8, 0.045)
+        .setDepth(4);
+      this.tweens.add({
+        targets: smoke,
+        x: smoke.x + 12,
+        y: smoke.y - 48,
+        scale: 1.8,
+        alpha: { from: 0.055, to: 0 },
+        duration: 3400 + i * 500,
+        delay: i * 620,
+        repeat: -1,
+        ease: 'Sine.out'
+      });
+    }
+
+    // Shrine orbiters.
+    const shrineOrbit = this.add.container(738, 208).setDepth(4);
+    [0, 120, 240].forEach((angle, i) => {
+      const rad = Phaser.Math.DegToRad(angle);
+      const mote = this.add.circle(Math.cos(rad) * 42, Math.sin(rad) * 21, 2 + (i % 2), 0x6ff0c7, 0.42)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      shrineOrbit.add(mote);
+    });
+    this.tweens.add({ targets: shrineOrbit, angle: 360, duration: 9000, repeat: -1, ease: 'Linear' });
+
+    // Mill fire sparks.
+    for (let i = 0; i < 7; i++) {
+      const x = 895 + Phaser.Math.Between(-22, 18);
+      const y = 365 + Phaser.Math.Between(-10, 18);
+      const ember = this.add.circle(x, y, 1 + (i % 2), i % 3 === 0 ? 0xffd275 : 0xff9d52, 0.32)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(4);
+      this.tweens.add({
+        targets: ember,
+        x: x + Phaser.Math.Between(-10, 12),
+        y: y - Phaser.Math.Between(22, 52),
+        alpha: { from: 0.42, to: 0 },
+        duration: 1500 + i * 180,
+        delay: i * 210,
+        repeat: -1,
+        ease: 'Sine.out'
+      });
+    }
+
+    // Swamp spirit motes.
+    for (let i = 0; i < 8; i++) {
+      const x = 1010 + Phaser.Math.Between(-72, 64);
+      const y = 535 + Phaser.Math.Between(-54, 52);
+      const spirit = this.add.circle(x, y, 2, 0x65ebc9, 0.16)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(4);
+      this.tweens.add({
+        targets: spirit,
+        x: x + Phaser.Math.Between(-14, 14),
+        y: y - Phaser.Math.Between(12, 30),
+        alpha: { from: 0.06, to: 0.38 },
+        scale: { from: 0.7, to: 1.35 },
+        duration: 2200 + i * 250,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.inOut'
@@ -592,31 +672,59 @@ class RegionScene extends Phaser.Scene {
       void subtitle;
     });
   }
+  private drawNavGlyph(x: number, y: number, index: number, accent: number) {
+    if (index === 0) {
+      this.add.rectangle(x, y, 17, 13, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
+      this.add.line(x, y, -5, 5, 0, -5, accent, 0.7).setDepth(22);
+      this.add.line(x, y, 0, -5, 6, 4, accent, 0.7).setDepth(22);
+    } else if (index === 1) {
+      this.add.rectangle(x, y, 14, 18, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
+      this.add.rectangle(x, y - 6, 7, 2, accent, 0.8).setDepth(22);
+      this.add.line(x, y, -4, -1, -1, 2, accent, 0.8).setDepth(22);
+      this.add.line(x, y, -1, 2, 5, -5, accent, 0.8).setDepth(22);
+    } else if (index === 2) {
+      this.add.rectangle(x, y + 1, 17, 14, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
+      this.add.rectangle(x, y - 7, 8, 4, 0x000000, 0.001).setStrokeStyle(1, accent, 0.7).setDepth(22);
+    } else if (index === 3) {
+      [-5, 0, 5].forEach((dy) => this.add.rectangle(x, y + dy, 17, 1, accent, 0.78).setDepth(22));
+      this.add.rectangle(x - 10, y, 2, 13, accent, 0.6).setDepth(22);
+    } else {
+      this.add.circle(x, y + 3, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.8).setDepth(22);
+      this.add.rectangle(x, y - 8, 2, 9, accent, 0.8).setDepth(22);
+      this.add.line(x, y, -6, -3, 0, 7, accent, 0.7).setDepth(22);
+      this.add.line(x, y, 6, -3, 0, 7, accent, 0.7).setDepth(22);
+    }
+  }
+
   private makeNav() {
-    // Preserve the painted bottom navigation, but redraw only its text so labels
-    // remain sharp at browser scale.
+    // Mask only the blurry baked label area, then render five crisp native actions
+    // in the same slots as the concept bar.
     const items = [
-      { x: 190, w: 270, label: 'Карта', action: () => this.closeModal() },
-      { x: 500, w: 270, label: 'Завдання', action: () => this.openQuests() },
-      { x: 820, w: 270, label: 'Рюкзак', action: () => this.openInventory() },
-      { x: 1135, w: 240, label: 'Табір', action: () => this.openCamp() }
+      { x: 140, label: 'Карта', action: () => this.closeModal(), accent: 0x73b68b },
+      { x: 390, label: 'Завдання', action: () => this.openQuests(), accent: 0xc6a356 },
+      { x: 640, label: 'Рюкзак', action: () => this.openInventory(), accent: 0x6faec0 },
+      { x: 890, label: 'Літопис', action: () => this.openChronicle(), accent: 0x9088c3 },
+      { x: 1140, label: 'Табір', action: () => this.openCamp(), accent: 0xbc8053 }
     ];
-    items.forEach((item) => {
-      const labelBg = this.add.rectangle(item.x, 663, Math.min(146, item.w - 32), 28, 0x04100c, 0.5)
+
+    items.forEach((item, index) => {
+      const mask = this.add.rectangle(item.x, 664, 204, 46, 0x04100c, 0.9)
+        .setStrokeStyle(1, item.accent, 0.24)
         .setDepth(19);
-      const label = uiText(this, item.x, 663, item.label, 14, '#eadcb8', 0.5).setDepth(20);
-      const hit = this.add.rectangle(item.x, 675, item.w, 68, 0xf0d18c, 0.001)
-        .setInteractive({ useHandCursor: true }).setDepth(21);
+      const label = uiText(this, item.x + 10, 664, item.label, 13, '#e9dbb5', 0.5).setDepth(21);
+      this.drawNavGlyph(item.x - 48, 664, index, item.accent);
+      const hit = this.add.rectangle(item.x, 674, 220, 70, item.accent, 0.001)
+        .setInteractive({ useHandCursor: true }).setDepth(23);
 
       const hoverOn = () => {
-        hit.setFillStyle(0xe9c770, 0.05).setStrokeStyle(1, 0xf0d18c, 0.3);
-        labelBg.setFillStyle(0x10231b, 0.72);
+        hit.setFillStyle(item.accent, 0.045).setStrokeStyle(1, item.accent, 0.3);
+        mask.setFillStyle(0x10231b, 0.96).setStrokeStyle(1, item.accent, 0.62);
         label.setColor('#fff0c8');
       };
       const hoverOff = () => {
-        hit.setFillStyle(0xe9c770, 0.001).setStrokeStyle(1, 0xf0d18c, 0);
-        labelBg.setFillStyle(0x04100c, 0.5);
-        label.setColor('#eadcb8');
+        hit.setFillStyle(item.accent, 0.001).setStrokeStyle(1, item.accent, 0);
+        mask.setFillStyle(0x04100c, 0.9).setStrokeStyle(1, item.accent, 0.24);
+        label.setColor('#e9dbb5');
       };
 
       hit.on('pointerover', hoverOn);
@@ -625,6 +733,7 @@ class RegionScene extends Phaser.Scene {
       label.setInteractive({ useHandCursor: true }).on('pointerdown', item.action);
     });
   }
+
   private openLandmark(spot: Landmark) {
     visit(state, spot.id);
     saveState(state);
