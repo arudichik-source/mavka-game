@@ -227,7 +227,7 @@ class TitleScene extends Phaser.Scene {
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
-    uiText(this, 470, 690, 'v0.7.0 • LIVING MAP', 11, '#61746b', 1);
+    uiText(this, 470, 690, 'v0.7.1 • NATIVE HUD', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
@@ -292,8 +292,14 @@ const LANDMARKS: Landmark[] = [
 
 class RegionScene extends Phaser.Scene {
   private modal?: Phaser.GameObjects.Container;
-  private resourceText!: Phaser.GameObjects.Text;
   private profileText!: Phaser.GameObjects.Text;
+  private hudHpFill!: Phaser.GameObjects.Rectangle;
+  private hudManaFill!: Phaser.GameObjects.Rectangle;
+  private hudHpText!: Phaser.GameObjects.Text;
+  private hudManaText!: Phaser.GameObjects.Text;
+  private coinText!: Phaser.GameObjects.Text;
+  private crystalText!: Phaser.GameObjects.Text;
+  private herbText!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -303,17 +309,7 @@ class RegionScene extends Phaser.Scene {
   create() {
     background(this, 'region-bg');
 
-    // Keep the concept art visible. Only a slim translucent status strip is drawn
-    // over the baked top counters instead of replacing the whole composition.
-    this.add.rectangle(W / 2, 25, W, 50, 0x020806, 0.9)
-      .setStrokeStyle(1, GOLD, 0.3)
-      .setDepth(10);
-    this.add.rectangle(350, 25, 1, 30, GOLD, 0.18).setDepth(11);
-    this.add.rectangle(930, 25, 1, 30, GOLD, 0.18).setDepth(11);
-    gameText(this, W / 2, 25, 'СЕРЦЕ ПУЩІ', 18, '#ead18f', 0.5).setDepth(11);
-
-    this.profileText = uiText(this, 20, 25, '', 14, '#f5e8c5').setDepth(11);
-    this.resourceText = uiText(this, W - 20, 25, '', 14, '#f4dda1', 1).setDepth(11);
+    this.drawRegionHud();
     this.toastText = uiText(this, W / 2, 72, '', 15, '#fff0c8', 0.5).setDepth(50).setAlpha(0);
 
     this.addRegionAtmosphere();
@@ -333,9 +329,54 @@ class RegionScene extends Phaser.Scene {
     }
   }
 
+  private drawRegionHud() {
+    this.add.rectangle(W / 2, 25, W, 50, 0x020806, 0.93)
+      .setStrokeStyle(1, GOLD, 0.32)
+      .setDepth(10);
+    this.add.rectangle(365, 25, 1, 30, GOLD, 0.18).setDepth(11);
+    this.add.rectangle(930, 25, 1, 30, GOLD, 0.18).setDepth(11);
+
+    this.profileText = uiText(this, 22, 13, '', 13, '#f5e8c5').setDepth(12);
+    this.add.rectangle(22, 31, 152, 5, 0x30140f, 0.95).setOrigin(0, 0.5).setDepth(11);
+    this.hudHpFill = this.add.rectangle(22, 31, 152, 5, RED, 0.96).setOrigin(0, 0.5).setDepth(12);
+    this.hudHpText = uiText(this, 182, 31, '', 10, '#f2d4c9').setDepth(12);
+    this.add.rectangle(22, 42, 152, 4, 0x0b2636, 0.95).setOrigin(0, 0.5).setDepth(11);
+    this.hudManaFill = this.add.rectangle(22, 42, 152, 4, 0x4d9dcc, 0.96).setOrigin(0, 0.5).setDepth(12);
+    this.hudManaText = uiText(this, 182, 42, '', 10, '#c9eafa').setDepth(12);
+
+    gameText(this, W / 2, 21, 'СЕРЦЕ ПУЩІ', 18, '#ead18f', 0.5).setDepth(12);
+    uiText(this, W / 2, 40, 'Розділ I', 10, '#8ea296', 0.5).setDepth(12);
+
+    const drawCoin = (x: number) => {
+      this.add.circle(x, 25, 8, 0x7d5a1d, 0.9).setStrokeStyle(1, 0xf0c96e, 0.88).setDepth(12);
+      this.add.circle(x, 25, 3, 0xf0c96e, 0.72).setDepth(13);
+    };
+    const drawCrystal = (x: number) => {
+      this.add.rectangle(x, 25, 11, 11, 0x3b7f8a, 0.72).setAngle(45).setStrokeStyle(1, 0x8de0ec, 0.82).setDepth(12);
+    };
+    const drawHerb = (x: number) => {
+      this.add.ellipse(x - 3, 23, 8, 14, 0x6eae72, 0.84).setAngle(-38).setDepth(12);
+      this.add.ellipse(x + 4, 27, 7, 12, 0x7dc383, 0.8).setAngle(38).setDepth(12);
+      this.add.rectangle(x, 29, 2, 8, 0x7fb07f, 0.8).setAngle(-8).setDepth(12);
+    };
+
+    drawCoin(1010);
+    drawCrystal(1111);
+    drawHerb(1202);
+    this.coinText = uiText(this, 1024, 25, '', 13, '#f1dda6').setDepth(13);
+    this.crystalText = uiText(this, 1126, 25, '', 13, '#d2eff3').setDepth(13);
+    this.herbText = uiText(this, 1217, 25, '', 13, '#d6edd6').setDepth(13);
+  }
+
   private refreshHud() {
-    this.profileText.setText(`Мавка • рівень ${state.level}     ❤ ${state.hp}/${state.maxHp}     ✦ ${state.mana}/${state.maxMana}`);
-    this.resourceText.setText(`◉ ${state.coins.toLocaleString('uk-UA')}     ◆ ${state.crystals}     ☘ ${state.herbs}`);
+    this.profileText.setText(`Мавка • рівень ${state.level}`);
+    this.hudHpFill.displayWidth = 152 * Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1);
+    this.hudManaFill.displayWidth = 152 * Phaser.Math.Clamp(state.mana / state.maxMana, 0, 1);
+    this.hudHpText.setText(`${state.hp}/${state.maxHp}`);
+    this.hudManaText.setText(`${state.mana}/${state.maxMana}`);
+    this.coinText.setText(state.coins.toLocaleString('uk-UA'));
+    this.crystalText.setText(String(state.crystals));
+    this.herbText.setText(String(state.herbs));
   }
 
   private drawQuestRail() {
@@ -559,6 +600,49 @@ class RegionScene extends Phaser.Scene {
     });
   }
 
+  private drawLandmarkGlyph(spot: Landmark, accent: number) {
+    const glyph = this.add.container(spot.markerX, spot.markerY).setDepth(9);
+
+    if (spot.id === 'settlement') {
+      const roofL = this.add.line(0, 0, -7, 0, 0, -7, accent, 0.9);
+      const roofR = this.add.line(0, 0, 0, -7, 7, 0, accent, 0.9);
+      const house = this.add.rectangle(0, 4, 10, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.9);
+      glyph.add([roofL, roofR, house]);
+    } else if (spot.id === 'oak') {
+      const leaf = this.add.ellipse(-1, -1, 9, 14, accent, 0.82).setAngle(-35);
+      const stem = this.add.rectangle(3, 4, 2, 9, accent, 0.7).setAngle(35);
+      glyph.add([leaf, stem]);
+    } else if (spot.id === 'shrine') {
+      const ring = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.92);
+      const gem = this.add.rectangle(0, 0, 7, 7, accent, 0.72).setAngle(45);
+      glyph.add([ring, gem]);
+    } else if (spot.id === 'hunter') {
+      const shaft = this.add.line(0, 0, -6, 5, 6, -5, accent, 0.88);
+      const tipA = this.add.line(0, 0, 6, -5, 1, -5, accent, 0.88);
+      const tipB = this.add.line(0, 0, 6, -5, 6, 0, accent, 0.88);
+      glyph.add([shaft, tipA, tipB]);
+    } else if (spot.id === 'yarin') {
+      const leafL = this.add.ellipse(-4, -1, 7, 12, accent, 0.78).setAngle(-38);
+      const leafR = this.add.ellipse(4, 1, 7, 12, accent, 0.78).setAngle(38);
+      const stem = this.add.rectangle(0, 5, 2, 10, accent, 0.68);
+      glyph.add([leafL, leafR, stem]);
+    } else if (spot.id === 'mill') {
+      const hub = this.add.circle(0, 0, 3, accent, 0.88);
+      const ring = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.78);
+      [0, 45, 90, 135].forEach((angle) => {
+        glyph.add(this.add.rectangle(0, 0, 2, 15, accent, 0.62).setAngle(angle));
+      });
+      glyph.add([ring, hub]);
+    } else {
+      const outer = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.84);
+      const inner = this.add.circle(1, 0, 4, 0x000000, 0.001).setStrokeStyle(1, accent, 0.64);
+      const core = this.add.circle(1, 0, 1.8, accent, 0.9);
+      glyph.add([outer, inner, core]);
+    }
+
+    return glyph;
+  }
+
   private makeLandmarks() {
     const accentFor = (id: string) => {
       if (id === 'settlement') return 0x6ccf91;
@@ -578,7 +662,7 @@ class RegionScene extends Phaser.Scene {
         .setAngle(45)
         .setStrokeStyle(2, accent, 0.88)
         .setDepth(7);
-      const markerCore = this.add.circle(spot.markerX, spot.markerY, 5, accent, 0.92).setDepth(8);
+      const markerGlyph = this.drawLandmarkGlyph(spot, accent);
       const markerHalo = this.add.circle(spot.markerX, spot.markerY, 25, accent, 0)
         .setStrokeStyle(2, accent, 0)
         .setDepth(6);
@@ -635,7 +719,7 @@ class RegionScene extends Phaser.Scene {
         plate.setFillStyle(0x0b1b14, 0.94).setStrokeStyle(1, accent, 0.86);
         name.setColor('#fff0c8');
         marker.setFillStyle(0x10271c, 0.96).setStrokeStyle(2, accent, 1);
-        markerCore.setScale(1.18);
+        markerGlyph.setScale(1.14);
         markerHalo.setAlpha(0.24).setStrokeStyle(2, accent, 0.7);
         this.tweens.killTweensOf(markerHalo);
         this.tweens.add({ targets: markerHalo, scale: 1.35, alpha: 0.06, duration: 520, yoyo: true, repeat: -1 });
@@ -647,14 +731,14 @@ class RegionScene extends Phaser.Scene {
           plate.setFillStyle(0x06100c, 0.86).setStrokeStyle(1, accent, 0.38);
           name.setColor('#f3e4bd');
           marker.setFillStyle(0x07110d, 0.92).setStrokeStyle(2, accent, 0.88);
-          markerCore.setScale(1);
+          markerGlyph.setScale(1);
           this.tweens.killTweensOf(markerHalo);
           markerHalo.setAlpha(0).setScale(1).setStrokeStyle(2, accent, 0);
         });
       };
       const activate = () => {
         this.tweens.add({
-          targets: [marker, markerCore],
+          targets: [marker, markerGlyph],
           scale: 1.12,
           duration: 90,
           yoyo: true,
