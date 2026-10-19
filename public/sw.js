@@ -1,4 +1,4 @@
-const CACHE = 'mavka-v070';
+const CACHE = 'mavka-v071';
 const CORE = ['./', './manifest.webmanifest', './mavka-icon.svg', './generated/region-hd.webp', './generated/battle-hd.webp'];
 
 self.addEventListener('install', (event) => {
