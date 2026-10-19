@@ -341,14 +341,15 @@ class RegionScene extends Phaser.Scene {
   private drawQuestRail() {
     // Rebuild only the baked quest-panel footprint so the world remains dominant.
     const x = 1156;
-    const y = 248;
+    const y = 246;
     const w = 226;
-    const h = 350;
+    const h = 380;
     const panel = this.add.rectangle(x, y, w, h, 0x04100c, 0.955)
       .setStrokeStyle(1, GOLD, 0.5)
       .setDepth(12);
-    this.add.rectangle(x, 86, 194, 1, GOLD, 0.32).setDepth(13);
-    uiText(this, x - 92, 66, 'ЗАВДАННЯ РЕГІОНУ', 12, '#d9c184').setDepth(13);
+    this.add.rectangle(x, 76, 194, 30, 0x07150f, 0.96).setDepth(13);
+    this.add.rectangle(x, 92, 194, 1, GOLD, 0.32).setDepth(14);
+    uiText(this, x - 92, 76, 'ЗАВДАННЯ РЕГІОНУ', 12, '#d9c184').setDepth(14);
 
     const rows: Array<{ id: QuestId; title: string; target: number; accent: number }> = [
       { id: 'oak', title: 'Старий Дуб', target: 3, accent: 0xd0aa58 },
@@ -357,7 +358,7 @@ class RegionScene extends Phaser.Scene {
     ];
 
     rows.forEach((q, i) => {
-      const yy = 130 + i * 76;
+      const yy = 138 + i * 76;
       const current = Phaser.Math.Clamp(state.quests[q.id], 0, q.target);
       const done = state.claimedQuests.includes(q.id);
       const row = this.add.rectangle(x, yy, 194, 56, 0x0a1712, 0.54)
@@ -376,11 +377,11 @@ class RegionScene extends Phaser.Scene {
       void row; void gem; void base; void fill;
     });
 
-    const journal = this.add.rectangle(x, 342, 184, 34, 0x0d1b15, 0.94)
+    const journal = this.add.rectangle(x, 360, 184, 34, 0x0d1b15, 0.94)
       .setStrokeStyle(1, GOLD, 0.42)
       .setInteractive({ useHandCursor: true })
       .setDepth(13);
-    const journalText = uiText(this, x, 342, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
+    const journalText = uiText(this, x, 360, 'Відкрити журнал', 12, '#ead7a5', 0.5).setDepth(14);
     const open = () => this.openQuests();
     journal.on('pointerover', () => journal.setFillStyle(0x1b3427, 0.98).setStrokeStyle(1, GOLD, 0.8));
     journal.on('pointerout', () => journal.setFillStyle(0x0d1b15, 0.94).setStrokeStyle(1, GOLD, 0.42));
@@ -707,8 +708,8 @@ class RegionScene extends Phaser.Scene {
     ];
 
     items.forEach((item, index) => {
-      const mask = this.add.rectangle(item.x, 664, 154, 31, 0x04100c, 0.82)
-        .setStrokeStyle(1, item.accent, 0.2)
+      const mask = this.add.rectangle(item.x, 664, 204, 46, 0x04100c, 0.9)
+        .setStrokeStyle(1, item.accent, 0.24)
         .setDepth(19);
       const label = uiText(this, item.x + 10, 664, item.label, 13, '#e9dbb5', 0.5).setDepth(21);
       this.drawNavGlyph(item.x - 48, 664, index, item.accent);
@@ -717,12 +718,12 @@ class RegionScene extends Phaser.Scene {
 
       const hoverOn = () => {
         hit.setFillStyle(item.accent, 0.045).setStrokeStyle(1, item.accent, 0.3);
-        mask.setFillStyle(0x10231b, 0.92).setStrokeStyle(1, item.accent, 0.55);
+        mask.setFillStyle(0x10231b, 0.96).setStrokeStyle(1, item.accent, 0.62);
         label.setColor('#fff0c8');
       };
       const hoverOff = () => {
         hit.setFillStyle(item.accent, 0.001).setStrokeStyle(1, item.accent, 0);
-        mask.setFillStyle(0x04100c, 0.82).setStrokeStyle(1, item.accent, 0.2);
+        mask.setFillStyle(0x04100c, 0.9).setStrokeStyle(1, item.accent, 0.24);
         label.setColor('#e9dbb5');
       };
 
