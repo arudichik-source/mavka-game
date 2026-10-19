@@ -1271,26 +1271,81 @@ class BattleScene extends Phaser.Scene {
     this.enemyText = uiText(this, enemyX + 250, 38, '', 13, '#fff3df', 0.5).setDepth(32);
   }
 
+  private drawSkillGlyph(x: number, y: number, index: number, color: number) {
+    const objects: Phaser.GameObjects.GameObject[] = [];
+
+    if (index === 0) {
+      const leaf = this.add.ellipse(x, y, 26, 13, color, 0.9).setAngle(-34).setDepth(37);
+      const stem = this.add.rectangle(x + 8, y + 7, 18, 3, color, 0.72).setAngle(38).setDepth(37);
+      objects.push(leaf, stem);
+    } else if (index === 1) {
+      [-1, 0, 1].forEach((offset) => {
+        const root = this.add.rectangle(x + offset * 8, y + 2, 4, 25, color, 0.88)
+          .setAngle(offset * 25)
+          .setDepth(37);
+        objects.push(root);
+      });
+      const crown = this.add.ellipse(x, y - 9, 24, 9, color, 0.7).setDepth(37);
+      objects.push(crown);
+    } else if (index === 2) {
+      const head = this.add.circle(x, y + 1, 10, color, 0.86).setDepth(37);
+      const earL = this.add.rectangle(x - 8, y - 10, 8, 8, color, 0.86).setAngle(28).setDepth(37);
+      const earR = this.add.rectangle(x + 8, y - 10, 8, 8, color, 0.86).setAngle(-28).setDepth(37);
+      const muzzle = this.add.ellipse(x, y + 8, 12, 7, 0xe6f4ff, 0.7).setDepth(38);
+      objects.push(head, earL, earR, muzzle);
+    } else if (index === 3) {
+      [28, 20, 12].forEach((size, i) => {
+        const ring = this.add.ellipse(x + i * 2, y, size, size * 0.55, 0x000000, 0.001)
+          .setStrokeStyle(2, color, 0.85 - i * 0.18)
+          .setAngle(-12 + i * 12)
+          .setDepth(37);
+        objects.push(ring);
+      });
+    } else {
+      const left = this.add.circle(x - 6, y - 4, 8, color, 0.88).setDepth(37);
+      const right = this.add.circle(x + 6, y - 4, 8, color, 0.88).setDepth(37);
+      const base = this.add.rectangle(x, y + 5, 15, 15, color, 0.88).setAngle(45).setDepth(37);
+      objects.push(left, right, base);
+    }
+
+    return objects;
+  }
+
   private drawSkills() {
     const xs = [160, 335, 510, 685, 860];
     xs.forEach((x, i) => {
-      const hit = this.add.rectangle(x, 650, 158, 104, 0x0d1713, 0.96)
-        .setStrokeStyle(2, SKILLS[i].color, 0.72)
+      const hit = this.add.rectangle(x, 650, 158, 104, 0x0b1511, 0.97)
+        .setStrokeStyle(2, SKILLS[i].color, 0.68)
         .setInteractive({ useHandCursor: true })
         .setDepth(35);
-      const number = uiText(this, x - 64, 612, `${i + 1}`, 12, '#e8d39c', 0.5).setDepth(36);
-      const name = uiText(this, x, 634, SKILLS[i].name, 14, '#f2e6c9', 0.5).setDepth(36);
-      const cost = uiText(this, x, 665, `${SKILLS[i].cost} мани`, 12, '#7ecff1', 0.5).setDepth(36);
-      const cd = uiText(this, x, 650, '', 22, '#fff4d8', 0.5).setDepth(38);
-      hit.on('pointerover', () => hit.setFillStyle(SKILLS[i].color, 0.18).setStrokeStyle(2, SKILLS[i].color, 1));
-      hit.on('pointerout', () => hit.setFillStyle(0x0d1713, 0.96).setStrokeStyle(2, SKILLS[i].color, 0.72));
+      const inner = this.add.rectangle(x, 650, 148, 94, 0x0e1b16, 0.32)
+        .setStrokeStyle(1, SKILLS[i].color, 0.2)
+        .setDepth(35);
+      const number = uiText(this, x - 66, 610, `${i + 1}`, 11, '#d9c58e', 0.5).setDepth(36);
+      const glyphs = this.drawSkillGlyph(x, 622, i, SKILLS[i].color);
+      const name = uiText(this, x, 654, SKILLS[i].name, 13, '#f2e6c9', 0.5).setDepth(36);
+      const cost = uiText(this, x, 679, `${SKILLS[i].cost} мани`, 11, '#78c9ea', 0.5).setDepth(36);
+      const cd = uiText(this, x, 622, '', 21, '#fff4d8', 0.5).setDepth(39);
+
+      const hoverOn = () => {
+        hit.setFillStyle(SKILLS[i].color, 0.16).setStrokeStyle(2, SKILLS[i].color, 1).setScale(1.018);
+        inner.setFillStyle(SKILLS[i].color, 0.06);
+        glyphs.forEach((g) => this.tweens.add({ targets: g, scaleX: 1.08, scaleY: 1.08, duration: 110, ease: 'Sine.out' }));
+      };
+      const hoverOff = () => {
+        hit.setFillStyle(0x0b1511, 0.97).setStrokeStyle(2, SKILLS[i].color, 0.68).setScale(1);
+        inner.setFillStyle(0x0e1b16, 0.32);
+        glyphs.forEach((g) => this.tweens.add({ targets: g, scaleX: 1, scaleY: 1, duration: 90, ease: 'Sine.out' }));
+      };
+
+      hit.on('pointerover', hoverOn);
+      hit.on('pointerout', hoverOff);
       hit.on('pointerdown', () => this.useSkill(i));
       this.skillOverlays.push(hit);
       this.skillCdTexts.push(cd);
       void number; void name; void cost;
     });
   }
-
   private drawBattleControls() {
     uiText(this, 1015, 176, 'Журнал бою', 16, '#e9d08c').setDepth(41);
     this.logText = uiText(this, 1015, 218, '', 14, '#e9dfc8')
@@ -1359,6 +1414,11 @@ class BattleScene extends Phaser.Scene {
     this.time.delayedCall(320, () => {
       this.enemyHp = Math.max(0, this.enemyHp - damage);
       this.floatNumber(825, 310, `-${damage}`, '#ff8b68');
+      const impact = this.add.circle(825, 330, 26, SKILLS[index].color, 0.16)
+        .setStrokeStyle(3, SKILLS[index].color, 0.72)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(46);
+      this.tweens.add({ targets: impact, scale: 2.8, alpha: 0, duration: 300, onComplete: () => impact.destroy() });
       this.cameras.main.shake(80, 0.004);
       this.log(`${skill.name}: ${damage} шкоди.`);
       this.refreshBars();
@@ -1420,6 +1480,8 @@ class BattleScene extends Phaser.Scene {
       }
       this.heroHp = Math.max(0, this.heroHp - damage);
       this.floatNumber(340, 365, `-${damage}`, '#ffba79');
+      const hitFlash = this.add.ellipse(350, 390, 210, 260, 0xff6d52, 0.12).setDepth(43);
+      this.tweens.add({ targets: hitFlash, alpha: 0, scale: 1.18, duration: 280, onComplete: () => hitFlash.destroy() });
       this.cameras.main.shake(100, 0.006);
       this.heroMana = Math.min(state.maxMana, this.heroMana + 11);
       this.refreshBars();
@@ -1431,23 +1493,102 @@ class BattleScene extends Phaser.Scene {
 
   private skillEffect(index: number) {
     const colors = [0x55ef81, 0x8fbd52, 0x77caff, 0x74e3e1, 0xf1d16d];
-    if (index === 2) {
-      const streak = this.add.ellipse(420, 430, 150, 55, colors[index], 0.34).setDepth(44);
-      this.tweens.add({ targets: streak, x: 820, alpha: 0, scaleX: 1.7, duration: 360, onComplete: () => streak.destroy() });
-      return;
-    }
-    if (index === 1) {
-      for (let i = 0; i < 6; i++) {
-        const root = this.add.rectangle(785 + i * 18, 430, 7, 105, colors[index], 0.55).setAngle(Phaser.Math.Between(-30, 30)).setDepth(44);
-        this.tweens.add({ targets: root, y: 370, alpha: 0, duration: 700, delay: i * 40, onComplete: () => root.destroy() });
+    const color = colors[index];
+
+    if (index === 0) {
+      for (let i = 0; i < 4; i++) {
+        const slash = this.add.rectangle(430, 355 + i * 17, 140, 5, color, 0.45 - i * 0.06)
+          .setAngle(-12 + i * 4)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(44);
+        this.tweens.add({
+          targets: slash,
+          x: 830,
+          scaleX: 1.65,
+          alpha: 0,
+          duration: 300 + i * 30,
+          delay: i * 24,
+          ease: 'Cubic.out',
+          onComplete: () => slash.destroy()
+        });
+      }
+      for (let i = 0; i < 8; i++) {
+        const spark = this.add.circle(505 + i * 30, 370 + Phaser.Math.Between(-45, 45), 2, color, 0.7)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(45);
+        this.tweens.add({ targets: spark, x: spark.x + 150, y: spark.y - 18, alpha: 0, duration: 380, onComplete: () => spark.destroy() });
       }
       return;
     }
-    const pulse = this.add.circle(index === 4 ? 360 : 760, index === 4 ? 380 : 340, 28, colors[index], 0.25)
-      .setStrokeStyle(5, colors[index], 0.85).setDepth(44);
-    this.tweens.add({ targets: pulse, scale: index === 4 ? 5 : 4, alpha: 0, x: index === 4 ? 360 : 840, duration: 520, onComplete: () => pulse.destroy() });
-  }
 
+    if (index === 1) {
+      for (let i = 0; i < 8; i++) {
+        const root = this.add.rectangle(775 + i * 15, 455, 6, 120 + (i % 3) * 18, color, 0.58)
+          .setAngle(Phaser.Math.Between(-32, 32))
+          .setDepth(44);
+        this.tweens.add({
+          targets: root,
+          y: 365,
+          scaleY: 1.18,
+          alpha: 0,
+          duration: 720,
+          delay: i * 36,
+          ease: 'Back.out',
+          onComplete: () => root.destroy()
+        });
+      }
+      const bind = this.add.circle(830, 405, 42, color, 0.05).setStrokeStyle(4, color, 0.72).setDepth(44);
+      this.tweens.add({ targets: bind, scale: 1.7, alpha: 0, duration: 650, onComplete: () => bind.destroy() });
+      return;
+    }
+
+    if (index === 2) {
+      const shadow = this.add.ellipse(430, 430, 125, 48, 0x4fa8ff, 0.28)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(44);
+      const core = this.add.circle(470, 420, 16, color, 0.75).setDepth(45);
+      this.tweens.add({ targets: [shadow, core], x: 820, alpha: 0, scaleX: 1.8, duration: 360, ease: 'Cubic.in', onComplete: () => { shadow.destroy(); core.destroy(); } });
+      return;
+    }
+
+    if (index === 3) {
+      for (let i = 0; i < 3; i++) {
+        const ring = this.add.ellipse(360, 385, 80 + i * 35, 42 + i * 18, 0x000000, 0.001)
+          .setStrokeStyle(4 - i, color, 0.72 - i * 0.12)
+          .setDepth(44);
+        this.tweens.add({
+          targets: ring,
+          x: 760,
+          scaleX: 2,
+          scaleY: 1.35,
+          alpha: 0,
+          duration: 520 + i * 70,
+          delay: i * 55,
+          ease: 'Sine.out',
+          onComplete: () => ring.destroy()
+        });
+      }
+      return;
+    }
+
+    const pulse = this.add.circle(360, 380, 30, color, 0.2)
+      .setStrokeStyle(5, color, 0.9)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(44);
+    this.tweens.add({ targets: pulse, scale: 4.8, alpha: 0, duration: 620, ease: 'Sine.out', onComplete: () => pulse.destroy() });
+    for (let i = 0; i < 10; i++) {
+      const angle = (Math.PI * 2 * i) / 10;
+      const spark = this.add.circle(360, 380, 3, color, 0.72).setDepth(45);
+      this.tweens.add({
+        targets: spark,
+        x: 360 + Math.cos(angle) * Phaser.Math.Between(70, 125),
+        y: 380 + Math.sin(angle) * Phaser.Math.Between(45, 90),
+        alpha: 0,
+        duration: 600,
+        onComplete: () => spark.destroy()
+      });
+    }
+  }
   private healEffect(value: number) {
     this.floatNumber(340, 315, `+${value}`, '#8dff9e');
   }
