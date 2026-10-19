@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import './styles.css';
-import { ATLAS_DATA_URI, FRAME_HEIGHT, FRAME_WIDTH } from './art/atlas';
 import {
   GameState,
   QuestId,
@@ -23,9 +22,6 @@ const PANEL = 0x08110f;
 const GREEN = 0x62c98a;
 const CYAN = 0x61d1dc;
 const RED = 0xc84f45;
-const ART_SCALE = 1.5;
-const ART_W = Math.round(W * ART_SCALE);
-const ART_H = Math.round(H * ART_SCALE);
 
 let state: GameState = loadState();
 
@@ -154,61 +150,20 @@ class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('visual-atlas', ATLAS_DATA_URI);
+    // HD assets are generated at build/dev time from the compact source atlas.
+    // Keeping the source atlas out of the runtime bundle cuts JS size and lets
+    // Sharp do higher-quality resizing and sharpening than browser canvas.
+    this.load.image('region-bg', './generated/region-hd.webp');
+    this.load.image('battle-bg', './generated/battle-hd.webp');
   }
 
   create() {
-    const source = this.textures.get('visual-atlas').getSourceImage() as HTMLImageElement;
-    const makeFrame = (key: string, sy: number) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = ART_W;
-      canvas.height = ART_H;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) throw new Error('Canvas 2D unavailable');
-
-      // Supersample the compact concept art, then use restrained edge-aware
-      // micro-contrast. This avoids the smeared look without creating blocky pixels.
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.filter = 'contrast(1.075) saturate(1.035) brightness(1.015)';
-      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, ART_W, ART_H);
-      ctx.filter = 'none';
-
-      ctx.save();
-      ctx.globalAlpha = 0.045;
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(source, 0, sy, FRAME_WIDTH, FRAME_HEIGHT, 0, 0, ART_W, ART_H);
-      ctx.restore();
-
-      const image = ctx.getImageData(0, 0, ART_W, ART_H);
-      const src = image.data;
-      const out = new Uint8ClampedArray(src);
-      for (let y = 1; y < ART_H - 1; y++) {
-        for (let x = 1; x < ART_W - 1; x++) {
-          const i = (y * ART_W + x) * 4;
-          const left = i - 4;
-          const right = i + 4;
-          const up = i - ART_W * 4;
-          const down = i + ART_W * 4;
-          for (let channel = 0; channel < 3; channel++) {
-            const center = src[i + channel];
-            const avg = (src[left + channel] + src[right + channel] + src[up + channel] + src[down + channel]) * 0.25;
-            const diff = center - avg;
-            const boost = Phaser.Math.Clamp(diff * (Math.abs(diff) > 6 ? 0.28 : 0.12), -16, 16);
-            out[i + channel] = Phaser.Math.Clamp(Math.round(center + boost), 0, 255);
-          }
-        }
-      }
-      image.data.set(out);
-      ctx.putImageData(image, 0, 0);
-      this.textures.addCanvas(key, canvas);
-    };
-    makeFrame('region-bg', 0);
-    makeFrame('battle-bg', FRAME_HEIGHT);
+    if (!this.textures.exists('region-bg') || !this.textures.exists('battle-bg')) {
+      throw new Error('Generated HD scene assets are unavailable');
+    }
     this.scene.start('title');
   }
 }
-
 class TitleScene extends Phaser.Scene {
   constructor() {
     super('title');
@@ -272,7 +227,7 @@ class TitleScene extends Phaser.Scene {
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
-    uiText(this, 470, 690, 'v0.6.8', 11, '#61746b', 1);
+    uiText(this, 470, 690, 'v0.6.9 • HD ART', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
