@@ -1,5 +1,5 @@
-const CACHE = 'mavka-v068';
-const CORE = ['./', './manifest.webmanifest', './mavka-icon.svg'];
+const CACHE = 'mavka-v069';
+const CORE = ['./', './manifest.webmanifest', './mavka-icon.svg', './generated/region-hd.webp', './generated/battle-hd.webp'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE)));

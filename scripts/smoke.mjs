@@ -64,14 +64,22 @@ await page.waitForFunction(() => {
   return game?.scene?.getScenes(true)?.some((scene) => scene.scene.key === 'title');
 }, null, { timeout: 15_000 });
 
-const assetsReady = await page.evaluate(() => {
+const assets = await page.evaluate(() => {
   const game = window.__MAVKA_GAME__;
-  return Boolean(
-    game?.textures?.exists('region-bg') &&
-    game?.textures?.exists('battle-bg')
-  );
+  const region = game?.textures?.get('region-bg')?.getSourceImage();
+  const battle = game?.textures?.get('battle-bg')?.getSourceImage();
+  return {
+    ready: Boolean(region && battle),
+    regionWidth: region?.width ?? 0,
+    regionHeight: region?.height ?? 0,
+    battleWidth: battle?.width ?? 0,
+    battleHeight: battle?.height ?? 0
+  };
 });
-if (!assetsReady) throw new Error('Visual atlas frames did not initialize');
+if (!assets.ready) throw new Error('Generated HD scene assets did not initialize');
+if (assets.regionWidth < 1900 || assets.regionHeight < 1000 || assets.battleWidth < 1900 || assets.battleHeight < 1000) {
+  throw new Error(`HD scene dimensions are too small: ${JSON.stringify(assets)}`);
+}
 
 await fs.promises.mkdir('visual-qa', { recursive: true });
 await page.screenshot({ path: 'visual-qa/title.png', fullPage: true });
