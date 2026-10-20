@@ -750,7 +750,7 @@ class RegionScene extends Phaser.Scene {
         .setDepth(23);
 
       hit.on('pointerover', () => {
-        underline.setAlpha(0.78).setScaleX(0.55);
+        underline.setAlpha(0.78).setScale(0.55, 1);
         hoverText.setAlpha(0.92);
         this.tweens.add({ targets: underline, scaleX: 1, duration: 130, ease: 'Sine.out' });
       });
