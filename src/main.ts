@@ -227,7 +227,7 @@ class TitleScene extends Phaser.Scene {
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
-    uiText(this, 470, 690, 'v0.7.1 • NATIVE HUD', 11, '#61746b', 1);
+    uiText(this, 470, 690, 'v0.7.2 • CLEAN MAP', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
