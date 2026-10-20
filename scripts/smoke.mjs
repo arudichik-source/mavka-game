@@ -96,6 +96,14 @@ await page.waitForFunction(() => {
 await page.waitForTimeout(180);
 
 await page.screenshot({ path: 'visual-qa/region.png', fullPage: true });
+await page.mouse.move(397, 164);
+await page.waitForTimeout(180);
+await page.screenshot({ path: 'visual-qa/region-landmark-hover.png', fullPage: true });
+await page.mouse.move(890, 674);
+await page.waitForTimeout(150);
+await page.screenshot({ path: 'visual-qa/region-nav-hover.png', fullPage: true });
+await page.mouse.move(640, 360);
+await page.waitForTimeout(80);
 await page.mouse.move(890, 674);
 await page.waitForTimeout(180);
 await page.screenshot({ path: 'visual-qa/region-nav-hover.png', fullPage: true });

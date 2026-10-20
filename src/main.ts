@@ -227,7 +227,7 @@ class TitleScene extends Phaser.Scene {
 
     uiText(this, 74, 645, 'Збереження відбувається автоматично', 14, '#aeb9af');
     uiText(this, 74, 670, 'Web • Telegram-ready • Android-ready', 13, '#7d9187');
-    uiText(this, 470, 690, 'v0.7.1 • NATIVE HUD', 11, '#61746b', 1);
+    uiText(this, 470, 690, 'v0.7.2 • CLEAN MAP', 11, '#61746b', 1);
   }
 
   private confirmNewGame() {
@@ -600,49 +600,6 @@ class RegionScene extends Phaser.Scene {
     });
   }
 
-  private drawLandmarkGlyph(spot: Landmark, accent: number) {
-    const glyph = this.add.container(spot.markerX, spot.markerY).setDepth(9);
-
-    if (spot.id === 'settlement') {
-      const roofL = this.add.line(0, 0, -7, 0, 0, -7, accent, 0.9);
-      const roofR = this.add.line(0, 0, 0, -7, 7, 0, accent, 0.9);
-      const house = this.add.rectangle(0, 4, 10, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.9);
-      glyph.add([roofL, roofR, house]);
-    } else if (spot.id === 'oak') {
-      const leaf = this.add.ellipse(-1, -1, 9, 14, accent, 0.82).setAngle(-35);
-      const stem = this.add.rectangle(3, 4, 2, 9, accent, 0.7).setAngle(35);
-      glyph.add([leaf, stem]);
-    } else if (spot.id === 'shrine') {
-      const ring = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.92);
-      const gem = this.add.rectangle(0, 0, 7, 7, accent, 0.72).setAngle(45);
-      glyph.add([ring, gem]);
-    } else if (spot.id === 'hunter') {
-      const shaft = this.add.line(0, 0, -6, 5, 6, -5, accent, 0.88);
-      const tipA = this.add.line(0, 0, 6, -5, 1, -5, accent, 0.88);
-      const tipB = this.add.line(0, 0, 6, -5, 6, 0, accent, 0.88);
-      glyph.add([shaft, tipA, tipB]);
-    } else if (spot.id === 'yarin') {
-      const leafL = this.add.ellipse(-4, -1, 7, 12, accent, 0.78).setAngle(-38);
-      const leafR = this.add.ellipse(4, 1, 7, 12, accent, 0.78).setAngle(38);
-      const stem = this.add.rectangle(0, 5, 2, 10, accent, 0.68);
-      glyph.add([leafL, leafR, stem]);
-    } else if (spot.id === 'mill') {
-      const hub = this.add.circle(0, 0, 3, accent, 0.88);
-      const ring = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.78);
-      [0, 45, 90, 135].forEach((angle) => {
-        glyph.add(this.add.rectangle(0, 0, 2, 15, accent, 0.62).setAngle(angle));
-      });
-      glyph.add([ring, hub]);
-    } else {
-      const outer = this.add.circle(0, 0, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.84);
-      const inner = this.add.circle(1, 0, 4, 0x000000, 0.001).setStrokeStyle(1, accent, 0.64);
-      const core = this.add.circle(1, 0, 1.8, accent, 0.9);
-      glyph.add([outer, inner, core]);
-    }
-
-    return glyph;
-  }
-
   private makeLandmarks() {
     const accentFor = (id: string) => {
       if (id === 'settlement') return 0x6ccf91;
@@ -657,40 +614,46 @@ class RegionScene extends Phaser.Scene {
     LANDMARKS.forEach((spot) => {
       const accent = accentFor(spot.id);
 
-      // Sharpen only the original marker/nameplate footprint, never the whole scene.
-      const marker = this.add.rectangle(spot.markerX, spot.markerY, 31, 31, 0x07110d, 0.92)
-        .setAngle(45)
-        .setStrokeStyle(2, accent, 0.88)
-        .setDepth(7);
-      const markerGlyph = this.drawLandmarkGlyph(spot, accent);
-      const markerHalo = this.add.circle(spot.markerX, spot.markerY, 25, accent, 0)
+      // Keep the illustrated labels/markers visible. Interaction is attached to the
+      // artwork itself; the live layer appears only on hover.
+      const halo = this.add.circle(spot.markerX, spot.markerY, spot.markerSize * 0.56, accent, 0)
         .setStrokeStyle(2, accent, 0)
-        .setDepth(6);
-
-      const plate = this.add.rectangle(spot.labelX, spot.labelY, spot.labelW, spot.labelH, 0x06100c, 0.86)
-        .setStrokeStyle(1, accent, 0.38)
         .setDepth(7);
-      const name = uiText(
+
+      const tooltipBg = this.add.rectangle(
+        Phaser.Math.Clamp(spot.markerX, 150, W - 150),
+        Math.max(82, spot.markerY - 62),
+        238,
+        46,
+        0x05100c,
+        0.96
+      )
+        .setStrokeStyle(1, accent, 0.72)
+        .setDepth(30)
+        .setAlpha(0);
+
+      const tooltipTitle = uiText(
         this,
-        spot.labelX - spot.labelW / 2 + 11,
-        spot.labelY - 9,
+        tooltipBg.x - 106,
+        tooltipBg.y - 8,
         spot.name,
         13,
-        '#f3e4bd'
-      ).setDepth(8);
-      const subtitle = uiText(
+        '#f5e7c4'
+      ).setDepth(31).setAlpha(0);
+
+      const tooltipSub = uiText(
         this,
-        spot.labelX - spot.labelW / 2 + 11,
-        spot.labelY + 10,
+        tooltipBg.x - 106,
+        tooltipBg.y + 11,
         spot.subtitle,
         9,
-        '#9eada1'
-      ).setDepth(8);
+        '#a8b7ac'
+      ).setDepth(31).setAlpha(0);
 
       const markerHit = this.add.circle(
         spot.markerX,
         spot.markerY,
-        spot.markerSize * 0.52,
+        spot.markerSize * 0.62,
         0xffffff,
         0.001
       ).setInteractive({ useHandCursor: true }).setDepth(9);
@@ -716,35 +679,45 @@ class RegionScene extends Phaser.Scene {
       let hoverDepth = 0;
       const showHover = () => {
         hoverDepth += 1;
-        plate.setFillStyle(0x0b1b14, 0.94).setStrokeStyle(1, accent, 0.86);
-        name.setColor('#fff0c8');
-        marker.setFillStyle(0x10271c, 0.96).setStrokeStyle(2, accent, 1);
-        markerGlyph.setScale(1.14);
-        markerHalo.setAlpha(0.24).setStrokeStyle(2, accent, 0.7);
-        this.tweens.killTweensOf(markerHalo);
-        this.tweens.add({ targets: markerHalo, scale: 1.35, alpha: 0.06, duration: 520, yoyo: true, repeat: -1 });
+        halo.setAlpha(0.13).setStrokeStyle(2, accent, 0.88).setScale(0.9);
+        tooltipBg.setAlpha(0.96);
+        tooltipTitle.setAlpha(1);
+        tooltipSub.setAlpha(1);
+        this.tweens.killTweensOf(halo);
+        this.tweens.add({
+          targets: halo,
+          scale: 1.16,
+          alpha: 0.035,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.inOut'
+        });
       };
+
       const hideHover = () => {
         hoverDepth = Math.max(0, hoverDepth - 1);
-        this.time.delayedCall(25, () => {
+        this.time.delayedCall(35, () => {
           if (hoverDepth !== 0) return;
-          plate.setFillStyle(0x06100c, 0.86).setStrokeStyle(1, accent, 0.38);
-          name.setColor('#f3e4bd');
-          marker.setFillStyle(0x07110d, 0.92).setStrokeStyle(2, accent, 0.88);
-          markerGlyph.setScale(1);
-          this.tweens.killTweensOf(markerHalo);
-          markerHalo.setAlpha(0).setScale(1).setStrokeStyle(2, accent, 0);
+          this.tweens.killTweensOf(halo);
+          halo.setAlpha(0).setScale(1).setStrokeStyle(2, accent, 0);
+          tooltipBg.setAlpha(0);
+          tooltipTitle.setAlpha(0);
+          tooltipSub.setAlpha(0);
         });
       };
+
       const activate = () => {
+        this.tweens.killTweensOf(halo);
+        halo.setAlpha(0.2).setStrokeStyle(3, accent, 1);
         this.tweens.add({
-          targets: [marker, markerGlyph],
-          scale: 1.12,
-          duration: 90,
-          yoyo: true,
+          targets: halo,
+          scale: 1.35,
+          alpha: 0,
+          duration: 180,
           ease: 'Cubic.out'
         });
-        this.time.delayedCall(90, () => this.openLandmark(spot));
+        this.time.delayedCall(95, () => this.openLandmark(spot));
       };
 
       [markerHit, labelHit, worldHit].forEach((hit) => {
@@ -752,37 +725,12 @@ class RegionScene extends Phaser.Scene {
         hit.on('pointerout', hideHover);
         hit.on('pointerdown', activate);
       });
-
-      void subtitle;
     });
-  }
-  private drawNavGlyph(x: number, y: number, index: number, accent: number) {
-    if (index === 0) {
-      this.add.rectangle(x, y, 17, 13, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
-      this.add.line(x, y, -5, 5, 0, -5, accent, 0.7).setDepth(22);
-      this.add.line(x, y, 0, -5, 6, 4, accent, 0.7).setDepth(22);
-    } else if (index === 1) {
-      this.add.rectangle(x, y, 14, 18, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
-      this.add.rectangle(x, y - 6, 7, 2, accent, 0.8).setDepth(22);
-      this.add.line(x, y, -4, -1, -1, 2, accent, 0.8).setDepth(22);
-      this.add.line(x, y, -1, 2, 5, -5, accent, 0.8).setDepth(22);
-    } else if (index === 2) {
-      this.add.rectangle(x, y + 1, 17, 14, 0x000000, 0.001).setStrokeStyle(1, accent, 0.88).setDepth(22);
-      this.add.rectangle(x, y - 7, 8, 4, 0x000000, 0.001).setStrokeStyle(1, accent, 0.7).setDepth(22);
-    } else if (index === 3) {
-      [-5, 0, 5].forEach((dy) => this.add.rectangle(x, y + dy, 17, 1, accent, 0.78).setDepth(22));
-      this.add.rectangle(x - 10, y, 2, 13, accent, 0.6).setDepth(22);
-    } else {
-      this.add.circle(x, y + 3, 8, 0x000000, 0.001).setStrokeStyle(1, accent, 0.8).setDepth(22);
-      this.add.rectangle(x, y - 8, 2, 9, accent, 0.8).setDepth(22);
-      this.add.line(x, y, -6, -3, 0, 7, accent, 0.7).setDepth(22);
-      this.add.line(x, y, 6, -3, 0, 7, accent, 0.7).setDepth(22);
-    }
   }
 
   private makeNav() {
-    // Mask only the blurry baked label area, then render five crisp native actions
-    // in the same slots as the concept bar.
+    // Use the painted navigation directly; only invisible hit areas and a subtle
+    // hover line are added so the concept art is not covered by another UI layer.
     const items = [
       { x: 140, label: 'Карта', action: () => this.closeModal(), accent: 0x73b68b },
       { x: 390, label: 'Завдання', action: () => this.openQuests(), accent: 0xc6a356 },
@@ -791,30 +739,26 @@ class RegionScene extends Phaser.Scene {
       { x: 1140, label: 'Табір', action: () => this.openCamp(), accent: 0xbc8053 }
     ];
 
-    items.forEach((item, index) => {
-      const mask = this.add.rectangle(item.x, 664, 204, 46, 0x04100c, 0.9)
-        .setStrokeStyle(1, item.accent, 0.24)
-        .setDepth(19);
-      const label = uiText(this, item.x + 10, 664, item.label, 13, '#e9dbb5', 0.5).setDepth(21);
-      this.drawNavGlyph(item.x - 48, 664, index, item.accent);
-      const hit = this.add.rectangle(item.x, 674, 220, 70, item.accent, 0.001)
-        .setInteractive({ useHandCursor: true }).setDepth(23);
+    items.forEach((item) => {
+      const underline = this.add.rectangle(item.x, 698, 118, 2, item.accent, 0)
+        .setDepth(21);
+      const hoverText = uiText(this, item.x, 625, item.label, 11, '#f4e3b9', 0.5)
+        .setDepth(21)
+        .setAlpha(0);
+      const hit = this.add.rectangle(item.x, 674, 225, 72, item.accent, 0.001)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(23);
 
-      const hoverOn = () => {
-        hit.setFillStyle(item.accent, 0.045).setStrokeStyle(1, item.accent, 0.3);
-        mask.setFillStyle(0x10231b, 0.96).setStrokeStyle(1, item.accent, 0.62);
-        label.setColor('#fff0c8');
-      };
-      const hoverOff = () => {
-        hit.setFillStyle(item.accent, 0.001).setStrokeStyle(1, item.accent, 0);
-        mask.setFillStyle(0x04100c, 0.9).setStrokeStyle(1, item.accent, 0.24);
-        label.setColor('#e9dbb5');
-      };
-
-      hit.on('pointerover', hoverOn);
-      hit.on('pointerout', hoverOff);
+      hit.on('pointerover', () => {
+        underline.setAlpha(0.78).setScale(0.55, 1);
+        hoverText.setAlpha(0.92);
+        this.tweens.add({ targets: underline, scaleX: 1, duration: 130, ease: 'Sine.out' });
+      });
+      hit.on('pointerout', () => {
+        underline.setAlpha(0);
+        hoverText.setAlpha(0);
+      });
       hit.on('pointerdown', item.action);
-      label.setInteractive({ useHandCursor: true }).on('pointerdown', item.action);
     });
   }
 
